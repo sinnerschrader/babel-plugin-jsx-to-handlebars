@@ -1,0 +1,19 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "babel index.jsx > index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel": "^5.8.23",
+    "babel-plugin-jsx": "^1.2.0",
+    "classname": "0.0.0",
+    "jsx-to-html": "^1.1.0",
+    "react": "^0.13.3"
+  }
+}
