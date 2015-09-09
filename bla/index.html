@@ -1,0 +1,102 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+</head>
+<body>
+  <h1>hello world</h1>
+  <div id="app"></div>
+
+  <script id="main2" type="text/x-handlebars-template">
+    {{#>Test}}{{/Test}}
+  </script>
+  <script id="main" type="text/x-handlebars-template">
+    {{#>icon}}{{/icon}}
+    
+    <div style="border:1px solid red;margin-top:20px;">
+      {{#>icon-link icon="smiley"}}Link 1{{/icon-link}}
+    </div>
+    <div style="border:1px solid green;margin-top:20px;">
+      {{#>icon-link className="extra-class" href="http://www.google.com" icon="test"}}
+        Link 2
+        {{#>icon}}{{/icon}}
+      {{/icon-link}}
+    </div>
+  </script>
+
+  <script src="handlebars-v4.0.2.js"></script>
+  <script>
+    // var compiledIcon = Handlebars.compile(`
+    //     <div class="{{props.classes}}">{{props.icon}}</div>
+    //   `);
+    // Handlebars.registerPartial('icon', function ret(context, execOptions) {
+    //   context = context || {};
+    //   context.props = {};
+    //   context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
+
+    //   var icons = {
+    //     'smiley': '☺︎',
+    //     'car': '🚗',
+    //     'test': '€'
+    //   };
+    //   var iconKey = context.icon || 'smiley';
+    //   context.props.icon = icons[iconKey];
+    //   context.props.classes = ['icon', context.className].join(' ').trim();
+
+	  //   return compiledIcon.call(this, context, execOptions);
+	  // });
+    
+    // var compiledIconLink = Handlebars.compile(`
+    //     <a class="{{props.classname}}" href="{{props.href}}">
+    //       {{#>icon icon=props.icon}}{{/icon}}
+    //       <span class="icon-link-text">
+    //         {{props.children}}
+    //       </span>
+    //     </a>
+    //   `);
+    // Handlebars.registerPartial('icon-link', function ret(context, execOptions) {
+    //   context = context || {};
+    //   context.props = {};
+    //   context.props.children = new Handlebars.SafeString(execOptions.data['partial-block']({}));
+
+    //   context.props.classname = ['icon-link', context.className].join(' ').trim();
+    //   context.props.href = context.href || '#';
+    //   context.props.icon = context.icon;
+      
+	  //   return compiledIconLink.call(this, context, execOptions);
+	  // });
+    
+    // var main = Handlebars.compile(document.querySelector('#main').text);
+    // window.app.innerHTML = main();
+
+
+    // generated
+var _compiledPartial2 = Handlebars.compile('<li className="{{props.name}}">{{item}}</li>');
+
+var _compiledPartial = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}"><p>{{props.name}}</p>{{someDiv}}<img /><ul>{{_partialResult2}}</ul><Component /></div>');
+
+Handlebars.registerPartial('Test', function partial(context, execOptions) {
+  context = context || {};
+  context.props = {};
+  context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
+  var classname = ['b'].join(' ').trim();context.classname = classname;
+  var list = ['a', 'b'];context.list = list;
+  var someDiv = _react2['default'].createElement('div', null);context.someDiv = someDiv;
+
+  var _partialResult2 = list.map(function (item) {
+    var context = Object.assign({}, context);
+    context.item = item;
+    return _compiledPartial2.call(this, context, execOptions);
+  });
+
+  context._partialResult2 = _partialResult2;
+  return _compiledPartial.call(this, context, execOptions);
+});
+
+
+
+    var main2 = Handlebars.compile(document.querySelector('#main2').text);
+    window.app.innerHTML = main2();
+
+  </script>
+</body>
+</html>
