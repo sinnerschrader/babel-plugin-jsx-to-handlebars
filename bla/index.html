@@ -70,33 +70,55 @@
 
 
     // generated
-var _compiledPartial2 = Handlebars.compile('<li className="{{props.name}}">{{item}}</li>');
+var _compiledPartial = Handlebars.compile('<span></span>');
 
-var _compiledPartial = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}"><p>{{props.name}}</p>{{someDiv}}<img /><ul>{{_partialResult2}}</ul><Component /></div>');
+/**
+ * asdf
+ */
 
-Handlebars.registerPartial('Test', function partial(context, execOptions) {
-  context = context || {};
-  context.props = {};
-  context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
-  var classname = ['b'].join(' ').trim();context.classname = classname;
-  var list = ['a', 'b'];context.list = list;
-  var someDiv = _react2['default'].createElement('div', null);context.someDiv = someDiv;
+var _compiledPartial2 = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}">\n        <p>\n          {{props.name}}\n        </p>\n        {{someDiv}}\n        <img />\n        {{#if show}}<h1>show is true</h1>{{/if}}\n        <ul>\n          {{_callResult}}\n        </ul>\n        {{#if _test}}<Component />{{else}}null{{/if}}\n        {{props.children}}\n      </div>');
 
-  var _partialResult2 = list.map(function (item) {
-    var context = Object.assign({}, context);
-    context.item = item;
-    return _compiledPartial2.call(this, context, execOptions);
+var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{item}}</li>');
+
+  Handlebars.registerPartial('Test', function (context, execOptions) {
+    context = context || {};
+    context.props = {};
+    context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
+
+    var classname = ['b'].join(' ').trim();
+    context.classname = classname;
+    var list = ['a', 'b'];
+    context.list = list;
+    var someDiv = new Handlebars.SafeString(_compiledPartial.call(this, context, execOptions));
+    context.someDiv = someDiv;
+    var show = true;
+
+    context.show = show;
+
+    var _callResult = (function (result) {
+      return Array.isArray(result) ? new Handlebars.SafeString(result.join('')) : result;
+    })(list.map(function (item) {
+      var context = Object.assign({}, context);
+      context.item = item;
+
+      return new Handlebars.SafeString(_compiledPartial3.call(this, context, execOptions));
+    }));
+
+    context._callResult = _callResult;
+
+    var _test = true == true;
+
+    context._test = _test;
+    return new Handlebars.SafeString(_compiledPartial2.call(this, context, execOptions));
   });
 
-  context._partialResult2 = _partialResult2;
-  return _compiledPartial.call(this, context, execOptions);
-});
+
+
 
 
 
     var main2 = Handlebars.compile(document.querySelector('#main2').text);
     window.app.innerHTML = main2();
-
   </script>
 </body>
 </html>
