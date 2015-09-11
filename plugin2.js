@@ -69,14 +69,15 @@ module.exports = function(opts) {
             methodBody.body
           );
 
+          let programPath = findProgramPath(this);
           // Add mapping comment for dependencies
-          findProgramPath(this).parent.comments[0].value =
+          programPath.parent.comments[0].value =
             '\n'
             + dependencies.map(dependency => ` ${dependency.name} -> ${dependency.id}`)
               .join('\n')
             + '\n';
 
-          findProgramPath(this).node.body.push(
+          programPath.node.body.push(
             t.exportDefaultDeclaration(
               t.functionExpression(
                 null, // id
@@ -127,9 +128,10 @@ module.exports = function(opts) {
       },
       JSXElement: {
         enter(node, parent, scope) {
-          let compileResultRef = findProgramPath(this).scope.generateUidIdentifier('compiledPartial');
+          let programPath = findProgramPath(this);
+          let compileResultRef = programPath.scope.generateUidIdentifier('compiledPartial');
           let markup = processJSXElement(this);
-          findProgramPath(this).node.body.push(
+          programPath.node.body.push(
             t.variableDeclaration('var', [
               t.variableDeclarator(
                 compileResultRef,
@@ -196,131 +198,7 @@ module.exports = function(opts) {
         if (this.isJSXElement()) {
           markup += processJSXElement(this);
         } else if (this.isJSXExpressionContainer() && !isInsideJSXAttribute(this)) {
-          let expression = this.get('expression');
-          if (expression.isCallExpression()) {
-            expression.traverse({
-              enter() {
-                if (this.isFunctionExpression()) {
-                  this.setData('was-jsx', true);
-                  let body = this.get('body').get('body');
-                  let firstStatement = body[0];
-                  firstStatement.insertBefore(
-                    t.variableDeclaration('var', [
-                      t.variableDeclarator(
-                        t.identifier('context'),
-                        t.callExpression(
-                          createMemberExpression('Object', 'assign'),
-                          [
-                            t.objectExpression([]),
-                            t.identifier('context')
-                          ]
-                        )
-                      )
-                    ])
-                  );
-                  let params = this.get('params');
-                  for (let i = params.length - 1; i >= 0; i--) {
-                    let name = params[i].get('name').node;
-                    firstStatement.insertBefore(
-                      t.expressionStatement(
-                        t.assignmentExpression(
-                          '=',
-                          createMemberExpression('context', name),
-                          t.identifier(name)
-                        )
-                      )
-                    );
-                  }
-                }
-              }
-            });
-
-            let callResultRef = findProgramPath(this).scope.generateUidIdentifier('callResult');
-            let statement = findClosestStatement(expression);
-            statement.insertBefore(
-              t.variableDeclaration('var', [
-                t.variableDeclarator(
-                  callResultRef,
-                  t.callExpression(
-                    t.functionExpression(
-                      undefined, // id
-                      [ // params
-                        t.identifier('result')
-                      ],
-                      t.blockStatement([
-                        t.returnStatement(
-                          t.conditionalExpression(
-                            t.callExpression(
-                              createMemberExpression('Array', 'isArray'),
-                              [
-                                t.identifier('result')
-                              ]
-                            ),
-                            t.newExpression(
-                              createMemberExpression('Handlebars', 'SafeString'),
-                              [
-                                t.callExpression(
-                                  createMemberExpression(t.identifier('result'), 'join'),
-                                  [
-                                    t.literal('')
-                                  ]
-                                )
-                              ]
-                            ),
-                            t.identifier('result')
-                          )
-                        )
-                      ]),
-                      false, // generator
-                      false // async
-                    ),
-                    [
-                      expression.node
-                    ]
-                  )
-                )
-              ])
-            );
-
-            markup += '{{' + callResultRef.name + '}}';
-          } else if (expression.isLogicalExpression()) {
-            markup += '{{#if ' + expression.get('left').get('name').node + '}}'
-                + processJSXElement(expression.get('right'))
-              + '{{/if}}';
-          } else if (expression.isConditionalExpression()) {
-
-            let testRef = findProgramPath(this).scope.generateUidIdentifier('test');
-            findClosestStatement(expression).insertBefore(
-              t.variableDeclaration('var', [
-                t.variableDeclarator(
-                  testRef,
-                  expression.get('test').node
-                )
-              ])
-            );
-
-            let consequent = expression.get('consequent');
-            if (consequent.isJSXElement()) {
-              consequent = processJSXElement(consequent);
-            } else {
-              consequent = stringifyExpression(filterThisExpressions(consequent));
-            }
-            
-            let alternate = expression.get('alternate');
-            if (alternate.isJSXElement()) {
-              alternate = processJSXElement(alternate);
-            } else {
-              alternate = stringifyExpression(filterThisExpressions(alternate));
-            }
-
-            markup += '{{#if ' + testRef.name + '}}'
-                + consequent
-              + '{{else}}'
-                + alternate
-              + '{{/if}}';
-          } else {
-            markup += '{{' + stringifyExpression(filterThisExpressions(expression)) + '}}';
-          }
+          markup += processJSXExpressionContainer.bind(this)();
         } else if (this.isJSXOpeningElement() || this.isJSXClosingElement()) {
           // Skip
         } else if (this.isLiteral()) {
@@ -335,6 +213,114 @@ module.exports = function(opts) {
     // Closing
     if (!selfClosing) {
       markup += '</' + path.get('closingElement').get('name').get('name').node + '>';
+    }
+    return markup;
+  }
+
+  function processJSXExpressionContainer() {
+    let markup = '';
+    let expression = this.get('expression');
+    if (expression.isCallExpression()) {
+      expression.traverse({
+        enter() {
+          if (this.isFunctionExpression()) {
+            this.setData('was-jsx', true);
+            let body = this.get('body').get('body');
+            let firstStatement = body[0];
+            firstStatement.insertBefore(
+              t.variableDeclaration('var', [
+                t.variableDeclarator(
+                  t.identifier('context'),
+                  t.callExpression(
+                    createMemberExpression('Object', 'assign'),
+                    [
+                      t.objectExpression([]),
+                      t.identifier('context')
+                    ]
+                  )
+                )
+              ])
+            );
+            let params = this.get('params');
+            for (let i = params.length - 1; i >= 0; i--) {
+              let name = params[i].get('name').node;
+              firstStatement.insertBefore(
+                t.expressionStatement(
+                  t.assignmentExpression(
+                    '=',
+                    createMemberExpression('context', name),
+                    t.identifier(name)
+                  )
+                )
+              );
+            }
+          }
+        }
+      });
+
+      let callResultRef = findProgramPath(this).scope.generateUidIdentifier('callResult');
+      let statement = findClosestStatement(expression);
+      statement.insertBefore(
+        t.variableDeclaration('var', [
+          t.variableDeclarator(
+            callResultRef,
+            t.callExpression(
+              createOptionalArrayJoinFunction(),
+              [
+                expression.node
+              ]
+            )
+          )
+        ])
+      );
+
+      markup += '{{' + callResultRef.name + '}}';
+    } else if (expression.isLogicalExpression()) {
+      let testRef = findProgramPath(this).scope.generateUidIdentifier('test');
+      findClosestStatement(expression).insertBefore(
+        t.variableDeclaration('var', [
+          t.variableDeclarator(
+            testRef,
+            expression.get('left').node
+          )
+        ])
+      );
+      markup += '{{#if ' + testRef.name + '}}'
+          + processJSXElement(expression.get('right'))
+        + '{{/if}}';
+    } else if (expression.isConditionalExpression()) {
+      let testRef = findProgramPath(this).scope.generateUidIdentifier('test');
+      findClosestStatement(expression).insertBefore(
+        t.variableDeclaration('var', [
+          t.variableDeclarator(
+            testRef,
+            expression.get('test').node
+          )
+        ])
+      );
+
+      let consequent = expression.get('consequent');
+      if (consequent.isJSXElement()) {
+        consequent = processJSXElement(consequent);
+      } else {
+        consequent = stringifyExpression(filterThisExpressions(consequent));
+      }
+      
+      let alternate = expression.get('alternate');
+      if (alternate.isJSXElement()) {
+        alternate = processJSXElement(alternate);
+      } else {
+        alternate = stringifyExpression(filterThisExpressions(alternate));
+      }
+
+      markup += '{{#if ' + testRef.name + '}}'
+          + consequent
+        + '{{else}}'
+          + alternate
+        + '{{/if}}';
+    } else {
+      // TODO: Check if this is sufficient
+      markup += '{{' + stringifyExpression(filterThisExpressions(expression)) + '}}';
     }
     return markup;
   }
@@ -429,4 +415,40 @@ module.exports = function(opts) {
     }
     return expr;
   }
+
+  function createOptionalArrayJoinFunction() {
+    return t.functionExpression(
+      undefined, // id
+      [ // params
+        t.identifier('result')
+      ],
+      t.blockStatement([
+        t.returnStatement(
+          t.conditionalExpression(
+            t.callExpression(
+              createMemberExpression('Array', 'isArray'),
+              [
+                t.identifier('result')
+              ]
+            ),
+            t.newExpression(
+              createMemberExpression('Handlebars', 'SafeString'),
+              [
+                t.callExpression(
+                  createMemberExpression(t.identifier('result'), 'join'),
+                  [
+                    t.literal('')
+                  ]
+                )
+              ]
+            ),
+            t.identifier('result')
+          )
+        )
+      ]),
+      false, // generator
+      false // async
+    );
+  }
+
 }
