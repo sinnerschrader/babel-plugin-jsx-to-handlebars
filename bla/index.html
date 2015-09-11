@@ -7,80 +7,28 @@
   <div id="app"></div>
 
   <script id="main2" type="text/x-handlebars-template">
-    {{#>Test}}<h2>subheadline</h2>{{/Test}}
-  </script>
-  <script id="main" type="text/x-handlebars-template">
-    {{#>icon}}{{/icon}}
-    
-    <div style="border:1px solid red;margin-top:20px;">
-      {{#>icon-link icon="smiley"}}Link 1{{/icon-link}}
-    </div>
-    <div style="border:1px solid green;margin-top:20px;">
-      {{#>icon-link className="extra-class" href="http://www.google.com" icon="test"}}
-        Link 2
-        {{#>icon}}{{/icon}}
-      {{/icon-link}}
-    </div>
+    {{#>Test name="name"}}
+      <h2>subheadline</h2>
+      {{#>Test name="name2"}}
+        <h3>subheadline</h3>
+      {{/Test}}
+    {{/Test}}
   </script>
 
   <script src="handlebars-v4.0.2.js"></script>
   <script>
-    // var compiledIcon = Handlebars.compile(`
-    //     <div class="{{props.classes}}">{{props.icon}}</div>
-    //   `);
-    // Handlebars.registerPartial('icon', function ret(context, execOptions) {
-    //   context = context || {};
-    //   context.props = {};
-    //   context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
-
-    //   var icons = {
-    //     'smiley': '☺︎',
-    //     'car': '🚗',
-    //     'test': '€'
-    //   };
-    //   var iconKey = context.icon || 'smiley';
-    //   context.props.icon = icons[iconKey];
-    //   context.props.classes = ['icon', context.className].join(' ').trim();
-
-	  //   return compiledIcon.call(this, context, execOptions);
-	  // });
-    
-    // var compiledIconLink = Handlebars.compile(`
-    //     <a class="{{props.classname}}" href="{{props.href}}">
-    //       {{#>icon icon=props.icon}}{{/icon}}
-    //       <span class="icon-link-text">
-    //         {{props.children}}
-    //       </span>
-    //     </a>
-    //   `);
-    // Handlebars.registerPartial('icon-link', function ret(context, execOptions) {
-    //   context = context || {};
-    //   context.props = {};
-    //   context.props.children = new Handlebars.SafeString(execOptions.data['partial-block']({}));
-
-    //   context.props.classname = ['icon-link', context.className].join(' ').trim();
-    //   context.props.href = context.href || '#';
-    //   context.props.icon = context.icon;
-      
-	  //   return compiledIconLink.call(this, context, execOptions);
-	  // });
-    
-    // var main = Handlebars.compile(document.querySelector('#main').text);
-    // window.app.innerHTML = main();
-
-
     // generated
 var abc = ['a', 'b', 'c'];
 
 var _compiledPartial = Handlebars.compile('<span></span>');
 
-var _compiledPartial2 = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}">\n        <p>\n          {{props.name}}\n        </p>\n        {{someDiv}}\n        <img />\n        {{#if show}}<h1>show is true</h1>{{/if}}\n        <ul>\n          {{_callResult}}\n        </ul>\n        {{#if _test}}<Component />{{else}}null{{/if}}\n        {{props.children}}\n      </div>');
+var _compiledPartial2 = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}">\n        <p>\n          {{props.name}}\n        </p>\n        {{someDiv}}\n        <img />\n        {{#if _test}}<h1>show is true</h1>{{/if}}\n        <ul>\n          {{_callResult}}\n        </ul>\n        {{#if _test2}}<Component />{{else}}null{{/if}}\n        {{props.children}}\n      </div>');
 
 var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{item}}</li>');
 
   Handlebars.registerPartial('Test', function (context, execOptions) {
     context = context || {};
-    context.props = {};
+    context.props = context;
     context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
 
     var classname = ['b'].join(' ').trim();
@@ -92,6 +40,8 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
     var show = true;
 
     context.show = show;
+    var _test = show;
+    context._test = _test;
 
     var _callResult = (function (result) {
       return Array.isArray(result) ? new Handlebars.SafeString(result.join('')) : result;
@@ -104,12 +54,11 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
 
     context._callResult = _callResult;
 
-    var _test = true == true;
+    var _test2 = true == true;
 
-    context._test = _test;
+    context._test2 = _test2;
     return new Handlebars.SafeString(_compiledPartial2.call(this, context, execOptions));
   });
-
 
 
 

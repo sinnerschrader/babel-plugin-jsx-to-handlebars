@@ -40,12 +40,12 @@ module.exports = function(opts) {
                   )
                 )
               ),
-              // context.props = {};
+              // context.props = context;
               t.expressionStatement(
                 t.assignmentExpression(
                   '=',
                   createMemberExpression('context', 'props'),
-                  t.objectExpression([])
+                  t.identifier('context')
                 )
               ),
               // context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
