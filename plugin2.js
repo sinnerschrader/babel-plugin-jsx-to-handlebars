@@ -24,6 +24,7 @@ module.exports = function(opts) {
         exit(node) {
           let methodBody = node.value.body;
 
+          // Prepend context and context.props wrapper to function body
           let contextIdentifier = t.identifier('context');
           methodBody.body = Array.prototype.concat(
             [
@@ -77,6 +78,7 @@ module.exports = function(opts) {
               .join('\n')
             + '\n';
 
+          // export default function...
           programPath.node.body.push(
             t.exportDefaultDeclaration(
               t.functionExpression(
@@ -111,6 +113,9 @@ module.exports = function(opts) {
       },
       VariableDeclaration: {
         enter(node) {
+          // Add line 'context.<varname> = <varname>;'
+          // after each variable declaration in methods but not in jsx-attributes
+          // This fills the handlebars render-context with all local vars and react.props
           if (isInMethodDefinition(this) && !wasInsideJSXExpressionContainer(this)) {
             for (let decl of node.declarations) {
               this.insertAfter(
@@ -129,6 +134,7 @@ module.exports = function(opts) {
       JSXElement: {
         enter(node, parent, scope) {
           let programPath = findProgramPath(this);
+          // Extract and insert at the top the handelbars template...
           let compileResultRef = programPath.scope.generateUidIdentifier('compiledPartial');
           let markup = processJSXElement(this);
           programPath.node.body.push(
@@ -144,6 +150,7 @@ module.exports = function(opts) {
               )
             ])
           );
+          // ...and replace the expression element with a template render call
           this.replaceWith(
             t.newExpression(
               createMemberExpression('Handlebars', 'SafeString'),
@@ -166,10 +173,11 @@ module.exports = function(opts) {
 
   function processJSXElement(path) {
     let markup = '';
-    // Opening
+    // Opening tag...
     let opening = path.get('openingElement');
     let selfClosing = opening.get('selfClosing').node;
     markup += '<' + opening.get('name').get('name').node;
+    // ... attributes...
     for (let attribute of opening.get('attributes')) {
       if (attribute.isJSXSpreadAttribute()) {
         throw new Error('Spread attributes are not supported.');
@@ -192,7 +200,7 @@ module.exports = function(opts) {
       markup += '>';
     }
     
-    // Children
+    // ... children...
     path.traverse({
       enter() {
         if (this.isJSXElement()) {
@@ -210,7 +218,7 @@ module.exports = function(opts) {
       }
     });
 
-    // Closing
+    // ... and closing tag
     if (!selfClosing) {
       markup += '</' + path.get('closingElement').get('name').get('name').node + '>';
     }
@@ -221,6 +229,9 @@ module.exports = function(opts) {
     let markup = '';
     let expression = this.get('expression');
     if (expression.isCallExpression()) {
+      // Each call-expression in JSX need to be moved
+      // above the JSX expression and the template needs a
+      // context-variable to insert the render result for the call.
       expression.traverse({
         enter() {
           if (this.isFunctionExpression()) {
@@ -276,6 +287,7 @@ module.exports = function(opts) {
 
       markup += '{{' + callResultRef.name + '}}';
     } else if (expression.isLogicalExpression()) {
+      // Logical-expression are rewritten to handlebars if-helper
       let testRef = findProgramPath(this).scope.generateUidIdentifier('test');
       findClosestStatement(expression).insertBefore(
         t.variableDeclaration('var', [
@@ -289,6 +301,7 @@ module.exports = function(opts) {
           + processJSXElement(expression.get('right'))
         + '{{/if}}';
     } else if (expression.isConditionalExpression()) {
+      // Conditional-expression are rewritten to handlebars if-else-helper
       let testRef = findProgramPath(this).scope.generateUidIdentifier('test');
       findClosestStatement(expression).insertBefore(
         t.variableDeclaration('var', [
@@ -326,6 +339,8 @@ module.exports = function(opts) {
   }
 
   function filterThisExpressions(path) {
+    // Remove all this-expression from the ast-path, because handlebars does not have a this
+    // context. This is emulated with the context and context.props variables.
     switch (path.get('type').node) {
       case 'Literal':
         return path;
@@ -361,6 +376,7 @@ module.exports = function(opts) {
   }
 
   function stringifyExpression(path) {
+    // Creates a string-representation of the given ast-path.
     switch (path.get('type').node) {
       case 'Literal':
         return path.get('value').node;
