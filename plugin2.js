@@ -7,8 +7,6 @@ module.exports = function(opts) {
     visitor: {
       ImportDeclaration: {
         enter() {
-// console.log(this.get('specifiers')[0]);
-// import1;
           // Collect import statements as dependencies
           dependencies.push({
             id: this.get('source').get('value').node,
@@ -71,15 +69,13 @@ module.exports = function(opts) {
             methodBody.body
           );
 
-// console.log(findProgramPath(this));
-// asdf;
-          // // Add mapping comment for dependencies
-          // for (let dependency of dependencies) {
-          //   (node.leadingComments = node.leadingComments || []).push({
-          //     type: 'CommentLine',
-          //     value: ' ' + dependency.id + ' -> ' + dependency.name
-          //   })
-          // }
+          // Add mapping comment for dependencies
+          findProgramPath(this).parent.comments[0].value =
+            '\n'
+            + dependencies.map(dependency => ` ${dependency.name} -> ${dependency.id}`)
+              .join('\n')
+            + '\n';
+
           findProgramPath(this).node.body.push(
             t.exportDefaultDeclaration(
               t.functionExpression(
