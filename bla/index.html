@@ -70,11 +70,9 @@
 
 
     // generated
-var _compiledPartial = Handlebars.compile('<span></span>');
+var abc = ['a', 'b', 'c'];
 
-/**
- * asdf
- */
+var _compiledPartial = Handlebars.compile('<span></span>');
 
 var _compiledPartial2 = Handlebars.compile('<div className="{{classname}}" a="b" c="{{props.name}}">\n        <p>\n          {{props.name}}\n        </p>\n        {{someDiv}}\n        <img />\n        {{#if show}}<h1>show is true</h1>{{/if}}\n        <ul>\n          {{_callResult}}\n        </ul>\n        {{#if _test}}<Component />{{else}}null{{/if}}\n        {{props.children}}\n      </div>');
 
@@ -87,7 +85,7 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
 
     var classname = ['b'].join(' ').trim();
     context.classname = classname;
-    var list = ['a', 'b'];
+    var list = abc;
     context.list = list;
     var someDiv = new Handlebars.SafeString(_compiledPartial.call(this, context, execOptions));
     context.someDiv = someDiv;
@@ -111,8 +109,6 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
     context._test = _test;
     return new Handlebars.SafeString(_compiledPartial2.call(this, context, execOptions));
   });
-
-
 
 
 
