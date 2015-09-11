@@ -4,10 +4,16 @@
 import React from 'react';
 import Component from 'some-component';
 
+const abc = [
+	'a',
+	'b',
+	'c'
+];
+
 export default class Test extends React.Component {
   render() {
     var classname = ['b'].join(' ').trim();
-    var list = ['a', 'b'];
+    var list = abc;
     var someDiv = <span></span>;
     var show = true;
 

@@ -114,9 +114,7 @@ module.exports = function(opts) {
       },
       VariableDeclaration: {
         enter(node) {
-// console.log(this.scope.hasBinding('context'));
-// asdf;
-          if (!wasInsideJSXExpressionContainer(this)) {
+          if (isInMethodDefinition(this) && !wasInsideJSXExpressionContainer(this)) {
             for (let decl of node.declarations) {
               this.insertAfter(
                 t.expressionStatement(
@@ -410,6 +408,10 @@ module.exports = function(opts) {
 
   function findClosestStatement(path) {
     return path.findParent(path => path.isStatement());
+  }
+
+  function isInMethodDefinition(path) {
+    return path.findParent(path => path.isMethodDefinition());
   }
 
   function wasInsideJSXExpressionContainer(path) {
