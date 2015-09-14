@@ -15,7 +15,7 @@ export default class Test extends React.Component {
     var classname = ['b'].join(' ').trim();
     var list = abc;
     var someDiv = <span></span>;
-    var show = true;
+    var show = typeof(this.props.show) != 'undefined' ? this.props.show : true;
 
     return (
       <div className={classname} a="b" c={this.props.name}>

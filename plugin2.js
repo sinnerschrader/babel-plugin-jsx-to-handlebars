@@ -45,7 +45,7 @@ module.exports = function(opts) {
                 t.assignmentExpression(
                   '=',
                   createMemberExpression('context', 'props'),
-                  t.identifier('context')
+                  createMemberExpression('execOptions', 'hash')
                 )
               ),
               // context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
@@ -112,22 +112,31 @@ module.exports = function(opts) {
         }
       },
       VariableDeclaration: {
-        enter(node) {
+        enter() {
           // Add line 'context.<varname> = <varname>;'
           // after each variable declaration in methods but not in jsx-attributes
           // This fills the handlebars render-context with all local vars and react.props
           if (isInMethodDefinition(this) && !wasInsideJSXExpressionContainer(this)) {
-            for (let decl of node.declarations) {
+            for (let decl of this.get('declarations')) {
               this.insertAfter(
                 t.expressionStatement(
                   t.assignmentExpression(
                     '=',
-                    createMemberExpression('context', decl.id),
-                    decl.id
+                    createMemberExpression('context', decl.get('id').node),
+                    decl.get('id').node
                   )
                 )
               );
             }
+          }
+        }
+      },
+      MemberExpression: {
+        enter() {
+          if (this.get('object').isThisExpression()
+            && this.get('property').get('name').node == 'props') {
+            this.skip();
+            return createMemberExpression('context', 'props');
           }
         }
       },

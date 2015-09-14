@@ -9,7 +9,7 @@
   <script id="main2" type="text/x-handlebars-template">
     {{#>Test name="name"}}
       <h2>subheadline</h2>
-      {{#>Test name="name2"}}
+      {{#>Test name="name2" show=true}}
         <h3>subheadline</h3>
       {{/Test}}
     {{/Test}}
@@ -28,7 +28,7 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
 
   Handlebars.registerPartial('Test', function (context, execOptions) {
     context = context || {};
-    context.props = context;
+    context.props = execOptions.hash;
     context.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
 
     var classname = ['b'].join(' ').trim();
@@ -37,7 +37,7 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
     context.list = list;
     var someDiv = new Handlebars.SafeString(_compiledPartial.call(this, context, execOptions));
     context.someDiv = someDiv;
-    var show = true;
+    var show = typeof context.props.show != 'undefined' ? context.props.show : true;
 
     context.show = show;
     var _test = show;
@@ -59,7 +59,6 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{ite
     context._test2 = _test2;
     return new Handlebars.SafeString(_compiledPartial2.call(this, context, execOptions));
   });
-
 
 
     var main2 = Handlebars.compile(document.querySelector('#main2').text);
