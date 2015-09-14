@@ -2,7 +2,7 @@
  * asdf
  */
 import React from 'react';
-import Component from 'some-component';
+import Test2 from './test2';
 
 const abc = [
 	'a',
@@ -31,7 +31,7 @@ export default class Test extends React.Component {
           })}
         </ul>
         {true == true 
-          ? <Component />
+          ? <Test2 />
           : null}
         {this.props.children}
       </div>

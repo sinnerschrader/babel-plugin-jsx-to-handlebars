@@ -2,19 +2,49 @@ module.exports = function(opts) {
   let Plugin = opts.Plugin;
   let t = opts.types;
 
-  let dependencies = [];
   let localContextRef = t.identifier('localContext');
   let vars;
   return new Plugin('handlebars', {
     visitor: {
       ImportDeclaration: {
-        enter() {
-          // Collect import statements as dependencies
-          dependencies.push({
-            id: this.get('source').get('value').node,
-            name: this.get('specifiers')[0].get('local').get('name').node
-          })
-          this.dangerouslyRemove();
+        exit() {
+          if (this.get('source').get('value').node == 'react') {
+            this.replaceWith(
+              t.importDeclaration(
+                [
+                  t.importDefaultSpecifier(
+                    t.identifier('Handlebars')
+                  )
+                ],
+                t.literal('handlebars')
+              )
+            )
+          } else {
+            let specifier = this.get('specifiers')[0];
+            if (specifier.isImportDefaultSpecifier()) {
+              let name = specifier.get('local').get('name').node;
+              this.insertAfter(
+                t.ifStatement(
+                  t.binaryExpression(
+                    '===',
+                    t.unaryExpression(
+                      'typeof',
+                      t.identifier(name)
+                    ),
+                    t.literal('function')
+                  ),
+                  t.blockStatement([
+                    t.expressionStatement(
+                      t.callExpression(
+                        t.identifier(name),
+                        []
+                      )
+                    )
+                  ])
+                )
+              )
+            }
+          }
         }
       },
       ClassDeclaration: {
@@ -69,13 +99,6 @@ module.exports = function(opts) {
           );
 
           let programPath = findProgramPath(this);
-          // Add mapping comment for dependencies
-          programPath.parent.comments[0].value =
-            '\n'
-            + dependencies.map(dependency => ` ${dependency.name} -> ${dependency.id}`)
-              .join('\n')
-            + '\n';
-
           // export default function...
           programPath.node.body.push(
             t.exportDefaultDeclaration(
