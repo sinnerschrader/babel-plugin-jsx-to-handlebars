@@ -1,23 +1,13 @@
-<html>
-<head>
-    <meta charset="utf-8" />
-</head>
-<body>
-  <h1>hello world</h1>
-  <div id="app"></div>
+/*
+ React -> react
+ Component -> some-component
+*/
+'use strict';
 
-  <script id="main2" type="text/x-handlebars-template">
-    {{#>Test name="name"}}
-      <h2>subheadline</h2>
-      {{#>Test name="name2" show=true}}
-        <h3>subheadline</h3>
-      {{/Test}}
-    {{/Test}}
-  </script>
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
 
-  <script src="handlebars-v4.0.2.js"></script>
-  <script>
-    // generated
 var abc = ['a', 'b', 'c'];
 
 var _compiledPartial = Handlebars.compile('<span></span>');
@@ -26,6 +16,7 @@ var _compiledPartial2 = Handlebars.compile('<div className="{{_var}}" a="b" c="{
 
 var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{_var3}}</li>');
 
+exports['default'] = function () {
   Handlebars.registerPartial('Test', function (context, execOptions) {
     var localContext = {};
     localContext.props = execOptions.hash;
@@ -51,10 +42,6 @@ var _compiledPartial3 = Handlebars.compile('<li className="{{props.name}}">{{_va
     localContext._testHelperVar2 = true == true;
     return new Handlebars.SafeString(_compiledPartial2.call(this, localContext, execOptions));
   });
+};
 
-
-    var main2 = Handlebars.compile(document.querySelector('#main2').text);
-    window.app.innerHTML = main2();
-  </script>
-</body>
-</html>
+module.exports = exports['default'];

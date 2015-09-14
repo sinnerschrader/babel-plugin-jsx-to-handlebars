@@ -1,0 +1,6 @@
+jsconfig.json
+.vscode
+node_modules
+npm-debug.log
+typings
+plugin.dist.js

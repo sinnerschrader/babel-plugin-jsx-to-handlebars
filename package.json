@@ -4,16 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "babel index.jsx > index.js",
+    "start": "babel --stage 0 --out-file plugin.dist.js plugin.js",
+    "demo": "babel --stage=0 --plugins ./plugin.dist.js --out-dir demo/ source/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "babel": "^5.8.23",
-    "babel-plugin-jsx": "^1.2.0",
-    "classname": "0.0.0",
-    "jsx-to-html": "^1.1.0",
-    "react": "^0.13.3"
+    "babel": "^5.8.23"
   }
 }

@@ -1,252 +1,541 @@
-var runtimeRef;
-var dependencies = [];
-
 module.exports = function(opts) {
-  var Plugin = opts.Plugin;
-  var t = opts.types;
+  let Plugin = opts.Plugin;
+  let t = opts.types;
 
-  var blockStack = [];
-  var optionsRef;
+  let dependencies = [];
+  let localContextRef = t.identifier('localContext');
+  let vars;
   return new Plugin('handlebars', {
     visitor: {
-      Program: {
-        enter: function() {
-          runtimeRef = this.scope.generateUidIdentifier('runtime');
-          optionsRef = this.scope.generateUidIdentifier('options');
+      ImportDeclaration: {
+        enter() {
+          // Collect import statements as dependencies
+          dependencies.push({
+            id: this.get('source').get('value').node,
+            name: this.get('specifiers')[0].get('local').get('name').node
+          })
+          this.dangerouslyRemove();
+        }
+      },
+      ClassDeclaration: {
+        exit() {
+          this.dangerouslyRemove();
+        }
+      },
+      MethodDefinition: {
+        enter() {
+          vars = findVariablesInJSX(this);
         },
-        exit: function(node) {
-          // Write runtime require statement
-          node.body.unshift(
+        exit(node) {
+          let methodBody = node.value.body;
+
+          // Prepend context and context.props wrapper to function body
+          let contextIdentifier = t.identifier('context');
+          methodBody.body = Array.prototype.concat(
+            [
+              t.variableDeclaration('var', [
+                t.variableDeclarator(
+                  localContextRef,
+                  t.objectExpression([])
+                )
+              ]),
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  createMemberExpression(localContextRef, 'props'),
+                  createMemberExpression('execOptions', 'hash')
+                )
+              ),
+              // localContext.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
+              t.expressionStatement(
+                t.assignmentExpression(
+                  '=',
+                  createMemberExpression(localContextRef, 'props', 'children'),
+                  t.newExpression(
+                    createMemberExpression('Handlebars', 'SafeString'),
+                    [
+                      t.callExpression(
+                        createMemberExpression('execOptions', 'data', 'partial-block'),
+                        [
+                          contextIdentifier
+                        ]
+                      )
+                    ]
+                  )
+                )
+              )
+            ],
+            methodBody.body
+          );
+
+          let programPath = findProgramPath(this);
+          // Add mapping comment for dependencies
+          programPath.parent.comments[0].value =
+            '\n'
+            + dependencies.map(dependency => ` ${dependency.name} -> ${dependency.id}`)
+              .join('\n')
+            + '\n';
+
+          // export default function...
+          programPath.node.body.push(
+            t.exportDefaultDeclaration(
+              t.functionExpression(
+                null, // id
+                [], // params
+                t.blockStatement([
+                  t.expressionStatement(
+                    t.callExpression(
+                      createMemberExpression('Handlebars', 'registerPartial'),
+                      [
+                        t.literal(findClassDeclaration(this).get('id').get('name').node),
+                        t.functionExpression(
+                          undefined, // id
+                          [ // params
+                            contextIdentifier,
+                            t.identifier('execOptions')
+                          ],
+                          methodBody,
+                          false, // generator
+                          false // async
+                        )
+                      ]
+                    )
+                  )
+                ]),
+                false, // generator
+                false // async
+              )
+            )
+          );
+        }
+      },
+      VariableDeclaration: {
+        enter() {
+          // Add line 'context.<varname> = <varname>;'
+          // after each variable declaration in methods but not in jsx-attributes
+          // This fills the handlebars render-context with all local vars and react.props
+          if (isInMethodDefinition(this) && !wasInsideJSXExpressionContainer(this)) {
+            for (let decl of this.get('declarations')) {
+              let varRef = vars.get(createKeyFromPath(decl.get('id')));
+              if (varRef) {
+                this.replaceWith(
+                  t.expressionStatement(
+                    t.assignmentExpression(
+                      '=',
+                      createMemberExpression(localContextRef, varRef),
+                      decl.get('init').node
+                    )
+                  )
+                );
+              }
+            }
+          }
+        }
+      },
+      MemberExpression: {
+        enter() {
+          if (this.get('object').isThisExpression()
+            && this.get('property').get('name').node == 'props') {
+            this.skip();
+            return createMemberExpression(localContextRef, 'props');
+          }
+        }
+      },
+      JSXElement: {
+        enter(node, parent, scope) {
+          let programPath = findProgramPath(this);
+          // Extract and insert at the top the handelbars template...
+          let compileResultRef = programPath.scope.generateUidIdentifier('compiledPartial');
+          let markup = processJSXElement(this);
+          programPath.node.body.push(
             t.variableDeclaration('var', [
               t.variableDeclarator(
-                runtimeRef, 
+                compileResultRef,
                 t.callExpression(
-                  t.identifier('require'),
+                  createMemberExpression('Handlebars', 'compile'),
                   [
-                    t.literal('patternplate-handlebars/runtime')
+                    t.literal(markup)
                   ]
                 )
               )
             ])
           );
-        }
-      },
-      ImportDeclaration: {
-        enter: function(node) {
-          // Collect import statements as dependencies
-          dependencies.push({
-            id: node.source.value,
-            name: node.specifiers[0].local.name
-          })
-          this.dangerouslyRemove();
-        }
-      },
-      ExportDefaultDeclaration: {
-        exit: function(node) {
-          // Add mapping comment for dependencies
-          for (var i = 0, n = dependencies.length; i < n; i++) {
-            var dependency = dependencies[i];
-            (node.leadingComments = node.leadingComments || []).push({
-              type: 'CommentLine',
-              value: ' ' + dependency.id + ' -> ' + dependency.name
-            })
-          }
-        }
-      },
-      ClassDeclaration: {
-        exit: function(node) {
-          // Find render method...
-          var renderMethod;
-          for (var i = 0, n = node.body.body.length; i < n; i++) {
-            var methodDecl = node.body.body[i];
-            if (t.isMethodDefinition(methodDecl) && methodDecl.key.name === 'render') {
-              renderMethod = methodDecl.value;
-              renderMethod.params.push(optionsRef);
-            }
-          }
-          if (!renderMethod) {
-            throw new Error('No render method found');
-          }
-          // ... and rewrite to function which does Handlebars.registerHelper
-          return t.functionExpression(
-            null, // id
-            [], // params
-            t.blockStatement([
-              t.callExpression(
-                t.memberExpression(t.identifier('Handlebars'), t.identifier('registerHelper')), 
-                [
-                    t.literal(node.id.name),
-                    renderMethod
-                ]
-              )
-            ]),
-            false, // generator
-            false // async
-          );
-        }
-      },
-      FunctionExpression: {
-        enter: function(node) {
-          blockStack.push({
-            jsxStack: []
-          });
-        },
-        exit: function(node) {
-          blockStack.pop();
-        }
-      },
-      JSXElement: {
-        enter: function(node, parent) {
-          // Create new local stackframe
-          var currentBlock = peek(blockStack);
-          if (!currentBlock.sourceRef) {
-            currentBlock.propsRef = this.scope.generateUidIdentifier('props');
-            currentBlock.sourceRef = this.scope.generateUidIdentifier('source');
-            currentBlock.writer = createWriter(t, currentBlock.sourceRef, this.parentPath);
-            currentBlock.writer.addVariable(currentBlock.propsRef, 
-              t.memberExpression(optionsRef, t.identifier('hash'))
-            );
-            currentBlock.writer.addVariable(currentBlock.sourceRef, t.literal(''));
-          }
-          currentBlock['jsxStack'].push({
-            node: node,
-            element: true
-          });
-
-          // Write opening html + attributes
-          processOpeningElement(node.openingElement, currentBlock.writer, t);
-        },
-        exit: function(node, parent) {
-          // Remove local stackframe
-          var currentBlock = peek(blockStack);
-          var jsxStack = currentBlock['jsxStack'];
-          var current = jsxStack.pop();
-          if (!current.node.openingElement.selfClosing) {
-            // Write closing html
-            processClosingElement(current.node.closingElement, currentBlock.writer);
-          }
-          current.element = false;
-          if (jsxStack.length == 0) {
-            // Rewrite return statement
-            return t.newExpression(
-              t.memberExpression(t.identifier('Handlebars'), t.identifier('SafeString')),
+          // ...and replace the expression element with a template render call
+          this.replaceWith(
+            t.newExpression(
+              createMemberExpression('Handlebars', 'SafeString'),
               [
                 t.callExpression(
-                  t.memberExpression(currentBlock.sourceRef, t.identifier('join')),
+                  createMemberExpression(compileResultRef, 'call'),
+                  [
+                    t.thisExpression(),
+                    localContextRef,
+                    t.identifier('execOptions')
+                  ]
+                )
+              ]
+            )
+          );
+        }
+      }
+    }
+  });
+
+  function findVariablesInJSX(path) {
+    let vars = new Map();
+    path.traverse({
+      JSXExpressionContainer: {
+        enter(node, parentPath, scope) {
+          let expression = this.get('expression');
+          switch (expression.type) {
+            case 'Identifier':
+            case 'MemberExpression':
+              if (!isThisPropsExpression(expression)) {
+                let key = createKeyFromPath(expression);
+                let varRef = vars.get(key);
+                if (!varRef) {
+                  varRef = scope.generateUidIdentifier('var');
+                  vars.set(key, varRef);
+                }
+                expression.replaceWith(t.identifier(varRef.name));
+              }
+              break;
+          }
+        }
+      }
+    });
+    return vars;
+  }
+
+  function createKeyFromPath(path) {
+    switch (path.type) {
+      case 'Identifier':
+        return path.get('name').node;
+      case 'MemberExpression':
+        return createKeyFromPath(path.get('object')) + '.' + createKeyFromPath(path.get('property'));
+      case 'LogicalExpression':
+        return createKeyFromPath(path.get('left')) 
+          + path.get('operator').node 
+          + createKeyFromPath(path.get('right'));
+      case 'ThisExpression':
+        return 'this';
+      default:
+        throw new Error('Unable to create key for path type: ' + path.type);
+    }
+  }
+
+  function processJSXElement(path) {
+    let markup = '';
+    // Opening tag...
+    let opening = path.get('openingElement');
+    let selfClosing = opening.get('selfClosing').node;
+    markup += '<' + opening.get('name').get('name').node;
+    // ... attributes...
+    for (let attribute of opening.get('attributes')) {
+      if (attribute.isJSXSpreadAttribute()) {
+        throw new Error('Spread attributes are not supported.');
+      } else {
+        markup += ' ' + attribute.get('name').get('name').node + '="';
+        let value = attribute.get('value');
+        if (value.isJSXExpressionContainer()) {
+          markup += '{{' + stringifyExpression(filterThisExpressions(value.get('expression'))) + '}}';
+        } else if (value.isLiteral()) {
+          markup += value.get('value').node;
+        } else {
+          throw new Error('Unknown attribute node type: ' + attribute.get('type').node);
+        }
+        markup += '"';
+      }
+    }
+    if (selfClosing) {
+      markup += ' />';
+    } else {
+      markup += '>';
+    }
+    
+    // ... children...
+    path.traverse({
+      enter() {
+        if (this.isJSXElement()) {
+          markup += processJSXElement(this);
+        } else if (this.isJSXExpressionContainer() && !isInsideJSXAttribute(this)) {
+          markup += processJSXExpressionContainer.bind(this)();
+        } else if (this.isJSXOpeningElement() || this.isJSXClosingElement()) {
+          // Skip
+        } else if (this.isLiteral()) {
+          markup += this.get('value').node;
+        } else {
+          throw new Error('Unknown element during JSX processing:  ' + this.type);
+        }
+        this.skip();
+      }
+    });
+
+    // ... and closing tag
+    if (!selfClosing) {
+      markup += '</' + path.get('closingElement').get('name').get('name').node + '>';
+    }
+    return markup;
+  }
+
+  function processJSXExpressionContainer() {
+    let markup = '';
+    let expression = this.get('expression');
+    if (expression.isCallExpression()) {
+      // Each call-expression in JSX need to be moved
+      // above the JSX expression and the template needs a
+      // context-variable to insert the render result for the call.
+      expression.traverse({
+        enter() {
+          if (this.isFunctionExpression()) {
+            this.setData('was-jsx', true);
+            let body = this.get('body').get('body');
+            let firstStatement = body[0];
+            firstStatement.insertBefore(
+              t.variableDeclaration('var', [
+                t.variableDeclarator(
+                  localContextRef,
+                  t.callExpression(
+                    createMemberExpression('Object', 'assign'),
+                    [
+                      t.objectExpression([]),
+                      localContextRef
+                    ]
+                  )
+                )
+              ])
+            );
+            let params = this.get('params');
+            for (let i = params.length - 1; i >= 0; i--) {
+              let name = params[i].get('name').node;
+              var varRef = vars.get(createKeyFromPath(params[i]));
+              if (varRef) {
+                firstStatement.insertBefore(
+                  t.expressionStatement(
+                    t.assignmentExpression(
+                      '=',
+                      createMemberExpression(localContextRef, varRef.name),
+                      t.identifier(name)
+                    )
+                  )
+                );
+              }
+            }
+          }
+        }
+      });
+
+      let callResultRef = findProgramPath(this).scope.generateUidIdentifier('callResult');
+      let statement = findClosestStatement(expression);
+      statement.insertBefore(
+        t.expressionStatement(
+          t.assignmentExpression(
+            '=',
+            createMemberExpression(localContextRef, callResultRef),
+            t.callExpression(
+              createOptionalArrayJoinFunction(),
+              [
+                expression.node
+              ]
+            )
+          )
+        )
+      );
+
+      markup += '{{' + callResultRef.name + '}}';
+    } else if (expression.isLogicalExpression()) {
+      // Logical-expression are rewritten to handlebars if-helper
+      let varRef = expression.scope.generateUidIdentifier('test-helper-var');
+      findClosestStatement(expression).insertBefore(
+        t.expressionStatement(
+          t.assignmentExpression(
+            '=',
+            createMemberExpression(localContextRef, varRef),
+            expression.get('left').node
+          )
+        )
+      );
+      markup += '{{#if ' + varRef.name + '}}'
+          + processJSXElement(expression.get('right'))
+        + '{{/if}}';
+    } else if (expression.isConditionalExpression()) {
+      // Conditional-expression are rewritten to handlebars if-else-helper
+      let varRef = expression.scope.generateUidIdentifier('test-helper-var');
+      findClosestStatement(expression).insertBefore(
+        t.expressionStatement(
+          t.assignmentExpression(
+            '=',
+            createMemberExpression(localContextRef, varRef),
+            expression.get('test').node
+          )
+        )
+      );
+
+      let consequent = expression.get('consequent');
+      if (consequent.isJSXElement()) {
+        consequent = processJSXElement(consequent);
+      } else {
+        consequent = stringifyExpression(filterThisExpressions(consequent));
+      }
+      
+      let alternate = expression.get('alternate');
+      if (alternate.isJSXElement()) {
+        alternate = processJSXElement(alternate);
+      } else {
+        alternate = stringifyExpression(filterThisExpressions(alternate));
+      }
+
+      markup += '{{#if ' + varRef.name + '}}'
+          + consequent
+        + '{{else}}'
+          + alternate
+        + '{{/if}}';
+    } else {
+      // TODO: Check if this is sufficient
+      markup += '{{' + stringifyExpression(filterThisExpressions(expression)) + '}}';
+    }
+    return markup;
+  }
+
+  function filterThisExpressions(path) {
+    // Remove all this-expression from the ast-path, because handlebars does not have a this
+    // context. This is emulated with the context and context.props variables.
+    switch (path.get('type').node) {
+      case 'Literal':
+        return path;
+      case 'Identifier':
+        return path;
+      case 'BinaryExpression':
+        path.replaceWith(
+          t.binaryExpression(
+            path.get('operator').node,
+            filterThisExpressions(path.get('left')).node,
+            filterThisExpressions(path.get('right')).node
+          )
+        );
+        return path;
+      case 'MemberExpression':
+        if (path.get('object').isThisExpression()) {
+          path.replaceWith(path.get('property'));
+        } else if (path.get('object').isMemberExpression()) {
+          path.replaceWith(
+            createMemberExpression(filterThisExpressions(path.get('object')).node, path.get('property').node)
+          );
+        }
+        return path;
+      case 'CallExpression':
+        if (path.get('callee').isMemberExpression()) {
+          path.replaceWith(
+            t.callExpression(filterThisExpressions(path.get('callee')).node, path.get('arguments').node)
+          );
+        }
+        return path;
+    }
+    throw new Error('Unknown expression node type: ' + path.get('type').node);
+  }
+
+  function stringifyExpression(path) {
+    // Creates a string-representation of the given ast-path.
+    switch (path.get('type').node) {
+      case 'Literal':
+        return path.get('value').node;
+      case 'Identifier':
+        return path.get('name').node;
+      case 'BinaryExpression':
+        return stringifyExpression(path.get('left'))
+          + path.get('operator').node
+          + stringifyExpression(path.get('right'));
+      case 'MemberExpression':
+        return stringifyExpression(path.get('object')) + '.' + stringifyExpression(path.get('property'));
+      case 'ThisExpression':
+        return 'this';
+    }
+    throw new Error('Unknown expression node type: ' + path.type);
+  }
+
+  // -- helper -------------------
+
+  function findProgramPath(path) {
+    return path.findParent(path => path.isProgram());
+  }
+
+  function findClassDeclaration(path) {
+    return path.findParent(path => path.isClassDeclaration());
+  }
+
+  function findClosestStatement(path) {
+    return path.findParent(path => path.isStatement());
+  }
+
+  function isInMethodDefinition(path) {
+    return path.findParent(path => path.isMethodDefinition());
+  }
+
+  function wasInsideJSXExpressionContainer(path) {
+    return !!path.findParent(path => path.getData('was-jsx'));
+  }
+
+  function isInsideJSXAttribute(path) {
+    return !!path.findParent(path => path.isJSXAttribute());
+  }
+
+  function isThisPropsExpression(path) {
+    if (path.isMemberExpression()) {
+      var object = path.get('object');
+      if (object.isThisExpression()
+          && path.get('property').get('name').node == 'props') {
+        return true;
+      }
+      return isThisPropsExpression(object);
+    }
+    return false;
+  }
+
+  function createMemberExpression(...args) {
+    if (args.length == 1) {
+      throw new Error("Member expressions consists at least of one '.'");
+    }
+    let expr = typeof args[0] == 'string' ? t.identifier(args[0]) : args[0];
+    for (let i = 1, n = args.length; i < n; i++) {
+      let node = typeof args[i] == 'string' ? t.identifier(args[i]) : args[i];
+      expr = t.memberExpression(expr, node);
+    }
+    return expr;
+  }
+
+  function createOptionalArrayJoinFunction() {
+    return t.functionExpression(
+      undefined, // id
+      [ // params
+        t.identifier('result')
+      ],
+      t.blockStatement([
+        t.returnStatement(
+          t.conditionalExpression(
+            t.callExpression(
+              createMemberExpression('Array', 'isArray'),
+              [
+                t.identifier('result')
+              ]
+            ),
+            t.newExpression(
+              createMemberExpression('Handlebars', 'SafeString'),
+              [
+                t.callExpression(
+                  createMemberExpression(t.identifier('result'), 'join'),
                   [
                     t.literal('')
                   ]
                 )
               ]
-            );
-          }
-        }
-      },
-      JSXOpeningElement: {
-        enter: function() {
-          var current = peek(blockStack)['jsxStack'];
-          current.opening = true;
-        },
-        exit: function() {
-          var current = peek(blockStack)['jsxStack'];
-          current.opening = false;
-        }
-      },
-      JSXExpressionContainer: {
-        exit: function(node, parent) {
-          var currentBlock = peek(blockStack);
-          var current = currentBlock['jsxStack'];
-          if (current && !current.opening && currentBlock.writer) {
-            currentBlock.writer.addToHtml(node.expression);
-          }
-        }
-      },
-      MemberExpression: {
-        exit: function(node) {
-          // Rewrite this reference to local scoped variable
-          if (t.isMemberExpression(node.object)
-              && t.isThisExpression(node.object.object)) {
-            var currentBlock = peek(blockStack);
-            return t.memberExpression(currentBlock.propsRef, node.property);
-          }
-        }
-      }
-    }
-  });
-};
-
-/**
- * Process opening html tag and attributes
- */
-function processOpeningElement(node, writer, t) {
-  writer.addToHtml('<' + node.name.name)
-  for (var i = 0, n = node.attributes.length; i < n; i++) {
-    processAttribute(node.attributes[i], writer, t);
-  }
-  writer.addToHtml((node.selfClosing ? ' /' : '') + '>');
-}
-
-/**
- * Process attributes (including jsx-spread)
- */
-function processAttribute(node, writer, t) {
-  if (t.isJSXSpreadAttribute(node)) {
-    writer.addToHtml(
-      t.callExpression(
-        t.memberExpression(runtimeRef, t.identifier('spread')),
-        [
-          node.argument
-        ]
-      )
-    );
-  } else {
-    writer.addToHtml(' ' + node.name.name + '="');
-    var value = node.value;
-    if (t.isJSXExpressionContainer(value)) {
-      value = value.expression;
-    }
-    writer.addToHtml(value);
-    writer.addToHtml('"');
-  }
-}
-
-/**
- * Process closing html tags
- */
-function processClosingElement(node, writer) {
-  writer.addToHtml('</' + node.name.name + '>')
-}
-
-/**
- * AST helper functions
- */
-function createWriter(t, sourceRef, renderFunctionRef) {
-  return {
-    addVariable: function(ref, obj) {
-      renderFunctionRef.insertBefore(
-        t.variableDeclaration('var', [
-          t.variableDeclarator(ref, obj)
-        ])
-      );
-    },
-    addToHtml: function(obj) {
-      if (typeof obj === 'string') {
-        obj = t.literal(obj);
-      }
-      renderFunctionRef.insertBefore(
-        t.assignmentExpression(
-          '=',
-          sourceRef,
-          t.callExpression(
-            t.memberExpression(sourceRef, t.identifier('concat')),
-            [obj]
+            ),
+            t.identifier('result')
           )
         )
-      );
-    }
+      ]),
+      false, // generator
+      false // async
+    );
   }
-}
 
-function peek(stack) {
-  return stack.length > 0 ? stack[stack.length - 1] : undefined;
 }
