@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "babel --stage 0 plugin.js > plugin.dist.js",
-    "demo": "babel --stage=0 --plugins ./plugin.dist.js --out-dir demo/ source/",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "nodemon -e js,jsx --watch plugin.js --watch demo/main.js --watch source --exec 'npm run start && npm run demo && npm run browserify'",
-    "browserify": "browserify demo/main.js > demo/index.js"
+    "start": "babel --stage 0 lib/plugin.js > dist/plugin.dist.js",
+    "demo": "babel --stage=0 --plugins ./dist/plugin.dist.js --out-dir demo/ source/",
+    "watch": "nodemon -e js,jsx --watch lib/plugin.js --watch demo/main.js --watch source --exec 'npm run start && npm run demo && npm run browserify'",
+    "browserify": "browserify demo/main.js > demo/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
