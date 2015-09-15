@@ -7,7 +7,6 @@ export default class Test2 extends React.Component {
 		href: '#',
 		caption: 'Lorem ipsum dolor',
 		image: {},
-		prices,
 		component: 'figure'
 	};
 

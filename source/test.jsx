@@ -11,10 +11,19 @@ const abc = [
 ];
 
 export default class Test extends React.Component {
+
+  static defaultProps = {
+    defaultValue: 'some-default-value',
+    nonDefaultValue: 'should-be-overridden'
+  };
+
   render() {
     var classname = ['b'].join(' ').trim();
     var list = abc;
-    var someDiv = <span></span>;
+    var someDiv = <div>
+        <span>{this.props.defaultValue}</span>
+        <span>{this.props.nonDefaultValue}</span>
+      </div>;
     var show = this.props.show !== undefined ? this.props.show : true;
 
     return (

@@ -5,6 +5,6 @@ var babel = require('babel');
 var source = fs.readFileSync('source/test.jsx');
 var result = babel.transform(source, {
   stage: 0,
-  plugins: ['./plugin.dist.js']
+  plugins: ['./dist/plugin.dist.js']
 });
 console.log(result.code);
