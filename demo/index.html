@@ -1,13 +1,29 @@
 <html>
 <head>
     <meta charset="utf-8" />
+    <style type="text/css">
+      .outer {
+        border: 1px solid blue;
+        padding: 5px;
+      }
+      .inner {
+        border: 1px solid green;
+        padding: 5px;
+      }
+    </style>
 </head>
 <body>
   <div id="app"></div>
 
   <script id="main" type="text/x-handlebars-template">
-    {{#>Test name="name"}}
-    {{/Test}}
+    <div class="outer">
+      {{#>Test name="outer"}}
+        <div class="inner">
+          {{#>Test name="inner"}}
+          {{/Test}}
+        </div>
+      {{/Test}}
+    </div>
   </script>
 
   <script src="index.js"></script>

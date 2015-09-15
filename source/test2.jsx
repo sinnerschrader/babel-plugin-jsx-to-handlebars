@@ -13,7 +13,7 @@ export default class Test2 extends React.Component {
 
 	render() {
 		return (
-			<div>Some referenced component</div>
+			<div>Some referenced component: Given {this.props.name}</div>
 		);
 	}
 }
