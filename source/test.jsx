@@ -45,7 +45,7 @@ export default class Test extends React.Component {
           })}
         </ul>
         {true == true 
-          ? <SomeComponent name={this.props.name} />
+          ? <SomeComponent {...attrs} name={this.props.name} />
           : null}
         {this.props.children}
         <this.props.name></this.props.name>

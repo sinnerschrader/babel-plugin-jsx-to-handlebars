@@ -12,7 +12,7 @@ export default class Test2 extends React.Component {
 
 	render() {
 		return (
-			<div>Some referenced component: Given {this.props.name}</div>
+			<div attr={this.props.a}>Some referenced component: Given {this.props.name}</div>
 		);
 	}
 }
