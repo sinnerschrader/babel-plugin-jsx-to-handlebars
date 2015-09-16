@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-jsx-to-handlebars",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "babel-plugin to convert simple stateless react compontents to handlebars templates",
   "main": "dist/plugin.dist.js",
   "scripts": {
