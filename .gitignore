@@ -3,7 +3,6 @@ jsconfig.json
 node_modules
 npm-debug.log
 typings
-dist
 demo/index.js
 demo/test.js
 demo/test2.js
