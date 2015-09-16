@@ -25,10 +25,15 @@ export default class Test extends React.Component {
         <span>{this.props.nonDefaultValue}</span>
       </div>;
     var show = this.props.show !== undefined ? this.props.show : true;
+    var attrs = {
+      a: 'x',
+      b: 5,
+      c: false
+    };
 
     return (
       <div className={classname} a="b" c={this.props.name}>
-        <p>
+        <p a="y" {...attrs} b="6">
           {this.props.name}
         </p>
         {someDiv}
