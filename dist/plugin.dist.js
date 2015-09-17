@@ -270,6 +270,7 @@ module.exports = function (opts) {
     if (renderAsPartial) {
       return ' __$spread$__=' + ref.name;
     }
+    findClosestStatement(attributes[0]).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, ref.name), t.callExpression(createMemberExpression(t.callExpression(createMemberExpression(t.callExpression(createMemberExpression('Object', 'keys'), [createMemberExpression(localContextRef, ref.name)]), 'filter'), [t.functionExpression(null, [t.identifier('key')], t.blockStatement([t.returnStatement(t.logicalExpression('!=', t.identifier('key'), t.literal('children')))]))]), 'reduce'), [t.functionExpression(null, [t.identifier('props'), t.identifier('key')], t.blockStatement([t.expressionStatement(t.assignmentExpression('=', t.memberExpression(t.identifier('props'), t.identifier('key'), true), t.memberExpression(createMemberExpression(localContextRef, ref.name), t.identifier('key'), true))), t.returnStatement(t.identifier('props'))])), t.objectExpression([])]))));
     return '{{#each ' + ref.name + '}} {{@key}}="{{this}}"{{/each}}';
   }
 
@@ -542,7 +543,7 @@ module.exports = function (opts) {
   }
 
   function filterAttriubtes(attributes) {
-    var filteredAttributes = ['key'];
+    var filteredAttributes = ['key', 'children'];
     return attributes.filter(function (attribute) {
       return !attribute.has('name') || filteredAttributes.indexOf(attribute.get('name').get('name').node) == -1;
     });

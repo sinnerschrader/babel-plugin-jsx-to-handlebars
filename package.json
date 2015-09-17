@@ -26,7 +26,6 @@
     "url": "sinnerschrader/babel-plugin-jsx-to-handlebars"
   },
   "engines": {
-    "iojs": ">= 2.2.0",
     "node": ">= 4.0.0",
     "npm": ">= 2.5.1"
   },

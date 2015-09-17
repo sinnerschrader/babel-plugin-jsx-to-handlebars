@@ -12,3 +12,9 @@ test('children should be rendered properly', (t) => {
   let path = './tests/dependencies/children1.jsx';
   t.equal(handlebars(path), react(path));
 });
+
+test('spread on custom components', (t) => {
+  t.plan(1);
+  let path = './tests/dependencies/spread.jsx';
+  t.equal(handlebars(path), react(path));
+});
