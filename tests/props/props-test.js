@@ -27,3 +27,9 @@ test('defaultProps should be overwritten if set', (t) => {
   let data = {property: 'overwritten'};
   t.equal(handlebars(path, data), react(path, data));
 });
+
+test('spread props should be overwritten by order of occurence', (t) => {
+  t.plan(1);
+  let path = './tests/props/spread.jsx';
+  t.equal(handlebars(path), react(path));
+});

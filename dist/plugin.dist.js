@@ -268,7 +268,7 @@ module.exports = function (opts) {
     if (renderAsPartial) {
       return ' __$spread$__=' + ref.name;
     }
-    return ' {{#each ' + ref.name + '}}{{@key}}="{{this}}"{{/each}}';
+    return '{{#each ' + ref.name + '}} {{@key}}="{{this}}"{{/each}}';
   }
 
   function processAttributes(attributes, renderAsPartial) {
