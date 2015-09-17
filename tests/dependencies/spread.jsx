@@ -1,4 +1,5 @@
 import React from 'react';
+import Other from './dependency2.jsx';
 
 export default class Spread extends React.Component {
   render() {
@@ -8,7 +9,7 @@ export default class Spread extends React.Component {
       'data-c': "4"
     };
     return (
-      <div data-a="1" {...spread} data-c="5"></div>
+      <Other data-a="1" {...spread} data-c="5"></Other>
     );
   }
 }
