@@ -6,9 +6,7 @@ import React from 'react';
 
 export function handlebars(file, data = {}) {
   var dir = path.dirname(file);
-  return compileTemplate(customRequire(dir, babelTransform(file)), undefined, data)()
-    // FIXME: This is a hack since the plugin produces spaces and newlines 
-    .replace(/[\n\t]\s*/g, '');
+  return compileTemplate(customRequire(dir, babelTransform(file)), undefined, data)();
 }
 
 export function react(file, data = {}) {

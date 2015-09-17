@@ -197,22 +197,24 @@ module.exports = function (opts) {
     }
 
     // ... children...
+    var childMarkup = '';
     path.traverse({
       enter: function enter() {
         if (this.isJSXElement()) {
-          markup += processJSXElement(this);
+          childMarkup += processJSXElement(this);
         } else if (this.isJSXExpressionContainer() && !isInsideJSXAttribute(this)) {
-          markup += processJSXExpressionContainer.bind(this)();
+          childMarkup += processJSXExpressionContainer.bind(this)();
         } else if (this.isJSXOpeningElement() || this.isJSXClosingElement()) {
           // Skip
         } else if (this.isLiteral()) {
-            markup += this.get('value').node;
+            childMarkup += this.get('value').node;
           } else {
             throw new Error('Unknown element during JSX processing:  ' + this.type);
           }
         this.skip();
       }
     });
+    markup += childMarkup.trim();
 
     // ... and closing tag
     if (renderAsPartial) {
