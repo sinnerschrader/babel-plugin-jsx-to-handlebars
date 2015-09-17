@@ -1,20 +1,26 @@
-var fs = require('fs');
-var babel = require('babel');
-var Handlebars = require('handlebars');
+import * as fs from 'fs';
+import * as babel from 'babel';
+import Handlebars from 'handlebars';
+import React from 'react';
 
-var helpers = function(path) {
-  return helpers.compile(helpers.load(helpers.transform(path)));
+export function handlebars(path, data = {}) {
+  return compileTemplate(customRequire(babelTransform(path)), undefined, data)();
 }
 
-helpers.transform = function(path) {
+export function react(path, data = {}) {
+  var Component = customRequire(babelTransform(path, false));
+  return React.renderToStaticMarkup(React.createElement(Component, data));
+}
+
+export function babelTransform(path, enablePlugin = true) {
   var source = fs.readFileSync(path);
   return babel.transform(source, {
     stage: 0,
-    plugins: ['../dist/plugin.dist.js']
+    plugins: enablePlugin ? ['../dist/plugin.dist.js'] : []
   }).code;
 }
 
-helpers.load = function(code) {
+export function customRequire(code) {
   var mod = {
     exports: {}
   };
@@ -23,11 +29,9 @@ helpers.load = function(code) {
   return mod.exports;
 }
 
-helpers.compile = function(templateModule, children) {
-  children = children || '';
+export function compileTemplate(templateModule, children = '', data = {}) {
   templateModule.call(null);
-  var name = templateModule.name;
-  return Handlebars.compile('{{#>' + name + '}}' + children + '{{/' + name + '}}');
+  let name = templateModule.name;
+  let props = Object.keys(data).map(key => `${key}="${data[key]}"`).join(' ');  
+  return Handlebars.compile(`{{#>${name} ${props}}}${children}{{/${name}}}`);
 }
-
-module.exports = helpers;

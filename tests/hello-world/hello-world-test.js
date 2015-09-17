@@ -1,7 +1,8 @@
-var test = require('tape');
-var helpers = require('../helpers');
+import test from 'tape';
+import {handlebars, react} from '../helpers';
 
-test('hello world', function(t) {
+test('hello world', (t) => {
   t.plan(1);
-  t.equal(helpers('./tests/hello-world/hello-world.jsx')(), '<div>Hello world!</div>')
+  let path = './tests/hello-world/hello-world.jsx';
+  t.equal(handlebars(path), react(path));
 });
