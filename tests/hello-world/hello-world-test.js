@@ -6,3 +6,4 @@ test('hello world', (t) => {
   let path = './tests/hello-world/hello-world.jsx';
   t.equal(handlebars(path), react(path));
 });
+
