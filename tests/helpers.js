@@ -1,32 +1,47 @@
+import * as path from 'path';
 import * as fs from 'fs';
 import * as babel from 'babel';
 import Handlebars from 'handlebars';
 import React from 'react';
 
-export function handlebars(path, data = {}) {
-  return compileTemplate(customRequire(babelTransform(path)), undefined, data)();
+export function handlebars(file, data = {}) {
+  var dir = path.dirname(file);
+  return compileTemplate(customRequire(dir, babelTransform(file)), undefined, data)()
+    // FIXME: This is a hack since the plugin produces spaces and newlines 
+    .replace(/\n\s*/g, '');
 }
 
-export function react(path, data = {}) {
-  var Component = customRequire(babelTransform(path, false));
+export function react(file, data = {}) {
+  let Component = require(path.resolve(__dirname, '..', file));
   return React.renderToStaticMarkup(React.createElement(Component, data));
 }
 
-export function babelTransform(path, enablePlugin = true) {
-  var source = fs.readFileSync(path);
+export function babelTransform(file, enablePlugin = true) {
+  let source = fs.readFileSync(file);
   return babel.transform(source, {
     stage: 0,
     plugins: enablePlugin ? ['../dist/plugin.dist.js'] : []
   }).code;
 }
 
-export function customRequire(code) {
-  var mod = {
-    exports: {}
-  };
-  var fn = new Function('module', 'exports', 'require', code);
-  fn.call(null, mod, mod.exports, require);
-  return mod.exports;
+export function customRequire(dir, code) {
+  let commonjs = function(code) {
+    let mod = {
+      exports: {}
+    };
+    let req = function(id) {
+      if (id[0] == '.') {
+        id = './' + path.join(dir, id);
+        return commonjs(babelTransform(id));
+      } else {
+        return require(id);
+      }
+    }
+    let fn = new Function('module', 'exports', 'require', code);
+    fn.call(null, mod, mod.exports, req);
+    return mod.exports;
+  }
+  return commonjs(code);
 }
 
 export function compileTemplate(templateModule, children = '', data = {}) {
