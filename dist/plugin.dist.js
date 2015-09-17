@@ -327,9 +327,8 @@ module.exports = function (opts) {
           if (this.isArrowFunctionExpression() && !this.get('body').isBlockStatement()) {
             var body = this.get('body');
             this.replaceWith(t.functionExpression(null, this.node.params, t.blockStatement([t.returnStatement(body.node)]), false, false));
-            return;
           }
-          if (this.isFunctionExpression()) {
+          if (this.isFunctionExpression() || this.isArrowFunctionExpression()) {
             this.setData('was-jsx', true);
             var body = this.get('body').get('body');
             var firstStatement = body[0];

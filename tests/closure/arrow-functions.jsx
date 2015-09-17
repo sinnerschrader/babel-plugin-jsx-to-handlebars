@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default class Closure extends React.Component {
+export default class Arrow extends React.Component {
   render() {
     let list = [
 	  'a',
@@ -8,7 +8,7 @@ export default class Closure extends React.Component {
 	];
     return (
 	  <ul>
-	    {list.map(function(item, index) {
+	    {list.map((item, index) => {
 		    return <li key={index}>{index}. {item}</li>
 		  })}
 	  </ul>
