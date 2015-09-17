@@ -179,7 +179,7 @@ module.exports = function (opts) {
     }
 
     // ... attributes...
-    var attributes = opening.get('attributes');
+    var attributes = filterAttriubtes(opening.get('attributes'));
     if (hasSpreadAttribute(attributes)) {
       markup += processAttributesWithSpread(attributes, tagName, renderAsPartial);
     } else {
@@ -538,6 +538,13 @@ module.exports = function (opts) {
     t.identifier('result')], t.blockStatement([t.returnStatement(t.conditionalExpression(t.callExpression(createMemberExpression('Array', 'isArray'), [t.identifier('result')]), t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression(t.identifier('result'), 'join'), [t.literal('')])]), t.identifier('result')))]), false, // generator
     false // async
     );
+  }
+
+  function filterAttriubtes(attributes) {
+    var filteredAttributes = ['key'];
+    return attributes.filter(function (attribute) {
+      return !attribute.has('name') || filteredAttributes.indexOf(attribute.get('name').get('name').node) == -1;
+    });
   }
 
   function getAttributeName(attribute) {
