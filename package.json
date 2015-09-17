@@ -10,11 +10,25 @@
     "browserify": "browserify demo/main.js > demo/index.js",
     "test": "node -r babel/register node_modules/tape/bin/tape ./tests/**/*-test.js | faucet"
   },
-  "author": "markus.wolf@sinnerschrader.com",
+  "author": {
+    "name": "SinnerSchrader - Freie Radikale",
+    "email": "team-freie-radikale@sinnerschrader.com"
+  },
+  "contributors": [
+    {
+      "name": "Markus Wolf",
+      "email": "markus.wolf@sinnerschrader.com"
+    }
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sinnerschrader/babel-plugin-jsx-to-handlebars"
+    "url": "sinnerschrader/babel-plugin-jsx-to-handlebars"
+  },
+  "engines": {
+    "iojs": ">= 2.2.0",
+    "node": ">= 4.0.0",
+    "npm": ">= 2.5.1"
   },
   "dependencies": {
     "babel": "^5.8.23",
