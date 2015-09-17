@@ -8,7 +8,7 @@ export function handlebars(file, data = {}) {
   var dir = path.dirname(file);
   return compileTemplate(customRequire(dir, babelTransform(file)), undefined, data)()
     // FIXME: This is a hack since the plugin produces spaces and newlines 
-    .replace(/\n\s*/g, '');
+    .replace(/[\n\t]\s*/g, '');
 }
 
 export function react(file, data = {}) {
