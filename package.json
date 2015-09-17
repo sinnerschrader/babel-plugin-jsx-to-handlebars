@@ -12,6 +12,10 @@
   },
   "author": "markus.wolf@sinnerschrader.com",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sinnerschrader/babel-plugin-jsx-to-handlebars"
+  },
   "dependencies": {
     "babel": "^5.8.23",
     "handlebars": "^4.0.2"
