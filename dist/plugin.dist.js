@@ -88,6 +88,7 @@ module.exports = function (opts) {
                 if (!isFunctionInsideJSXExpressionContainer(expression)) {
                   findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
                 }
+                this.setData('original', expression.node);
                 expression.replaceWith(t.identifier(varRef.name));
               }
               break;
@@ -204,7 +205,7 @@ module.exports = function (opts) {
           var value = undefined;
           var valuePath = attribute.get('value');
           if (valuePath.isJSXExpressionContainer()) {
-            value = valuePath.get('expression').node;
+            value = valuePath.getData('original') || valuePath.get('expression').node;
           } else if (valuePath.isLiteral()) {
             value = valuePath.node;
           }
