@@ -151,14 +151,10 @@ module.exports = function (opts) {
       markup += processAttributes(attributes, renderAsPartial);
     }
 
-    if (selfClosing) {
-      markup += ' />';
+    if (renderAsPartial) {
+      markup += '}}';
     } else {
-      if (renderAsPartial) {
-        markup += '}}';
-      } else {
-        markup += '>';
-      }
+      markup += '>';
     }
 
     // ... children...
@@ -179,12 +175,12 @@ module.exports = function (opts) {
         this.skip();
       }
     });
-    markup += childMarkup.trim();
+    markup += childMarkup.trim().replace(/>[\n\t]+\s*</g, '><');
 
     // ... and closing tag
     if (renderAsPartial) {
       markup += '{{/' + tagName + '}}';
-    } else if (!selfClosing) {
+    } else if (!selfClosing || !isHtmlVoidElement(tagName)) {
       markup += '</' + tagName + '>';
     }
     return markup;
@@ -523,6 +519,14 @@ module.exports = function (opts) {
 
     var raw = attribute.get('name').get('name').node;
     return raw in JSXAttributeAliases ? JSXAttributeAliases[raw] : raw;
+  }
+
+  function isHtmlVoidElement(tagName) {
+    var voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen', 'link',
+    // Note: menuitem is not void in react
+    // 'menuitem',
+    'meta', 'param', 'source', 'track', 'wbr'];
+    return voidElements.indexOf(tagName) > -1;
   }
 };
 

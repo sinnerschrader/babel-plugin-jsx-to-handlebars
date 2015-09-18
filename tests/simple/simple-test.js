@@ -12,3 +12,9 @@ test('multiple expressions', (t) => {
   let path = './tests/simple/multiple-jsx-expressions.jsx';
   t.equal(handlebars(path), react(path));
 });
+
+test('html void elements', (t) => {
+  t.plan(1);
+  let path = './tests/simple/void-elements.jsx';
+  t.equal(handlebars(path), react(path));
+});
