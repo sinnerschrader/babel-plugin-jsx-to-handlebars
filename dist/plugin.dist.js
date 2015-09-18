@@ -177,7 +177,7 @@ module.exports = function (opts) {
         this.skip();
       }
     });
-    markup += childMarkup.trim().replace(/>[\n\t]+\s*</g, '><');
+    markup += childMarkup.trim().replace(/(>|}})[\n\t]+\s*(<|{{)/g, '$1$2');
 
     // ... and closing tag
     if (renderAsPartial) {
@@ -294,7 +294,7 @@ module.exports = function (opts) {
             var body = this.get('body');
             this.replaceWith(t.functionExpression(null, this.node.params, t.blockStatement([t.returnStatement(body.node)]), false, false));
           }
-          if (this.isFunctionExpression() || this.isArrowFunctionExpression()) {
+          if (this.isFunction()) {
             var params = this.get('params');
             var objects = [];
             var _iteratorNormalCompletion3 = true;
@@ -473,9 +473,9 @@ module.exports = function (opts) {
   function isFunctionInsideJSXExpressionContainer(path) {
     var result = false;
     path = path.findParent(function (path) {
-      return path.isFunctionExpression() || path.isArrowFunctionExpression();
+      return path.isFunction();
     });
-    if (path && (path.isFunctionExpression() || path.isArrowFunctionExpression())) {
+    if (path && path.isFunction()) {
       path = path.findParent(function (path) {
         return path.isJSXExpressionContainer();
       });

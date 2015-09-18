@@ -6,6 +6,7 @@ export default class Guard extends React.Component {
     return (
       <ul>
         {show && <li></li>}
+        {show ? <li></li> : null}
       </ul>
     );
   }
