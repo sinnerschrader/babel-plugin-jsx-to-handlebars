@@ -243,18 +243,22 @@ module.exports = function (opts) {
       for (var _iterator2 = attributes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
         var attribute = _step2.value;
 
-        markup += ' ' + getAttributeName(attribute) + '=';
         var value = attribute.get('value');
+        var valueMarkup = '';
         if (value.isJSXExpressionContainer()) {
           if (!renderAsPartial) {
-            markup += '"{{';
+            valueMarkup += '"{{';
           }
-          markup += stringifyExpression(filterThisExpressions(value.get('expression')));
+          value = stringifyExpression(filterThisExpressions(value.get('expression')));
+          valueMarkup += value;
           if (!renderAsPartial) {
-            markup += '}}"';
+            valueMarkup += '}}"';
           }
+          markup += prepareAttributeMarkup(attribute, renderAsPartial, value, valueMarkup);
         } else if (value.isLiteral()) {
-          markup += '"' + value.get('value').node + '"';
+          value = value.get('value').node;
+          valueMarkup += '"' + value + '"';
+          markup += prepareAttributeMarkup(attribute, true, value, valueMarkup);
         } else {
           throw new Error('Unknown attribute node type: ' + attribute.get('type').node);
         }
@@ -274,6 +278,18 @@ module.exports = function (opts) {
       }
     }
 
+    return markup;
+  }
+
+  function prepareAttributeMarkup(attribute, isStatic, value, valueMarkup) {
+    var markup = '';
+    if (!isStatic) {
+      markup += '{{#if ' + value + '}}';
+    }
+    markup += ' ' + getAttributeName(attribute) + '=' + valueMarkup;
+    if (!isStatic) {
+      markup += '{{/if}}';
+    }
     return markup;
   }
 
@@ -383,6 +399,8 @@ module.exports = function (opts) {
   function stringifyExpression(path) {
     // Creates a string-representation of the given ast-path.
     switch (path.get('type').node) {
+      case 'Literal':
+        return path.get('value').node;
       case 'Identifier':
         return path.get('name').node;
       case 'MemberExpression':
