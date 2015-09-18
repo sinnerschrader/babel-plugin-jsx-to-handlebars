@@ -53,42 +53,6 @@ module.exports = function (opts) {
           ), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(t.identifier(classID), 'handlebars-partial'), t.literal(true))), t.exportDefaultDeclaration(t.identifier(classID)));
         }
       },
-      VariableDeclaration: {
-        enter: function enter() {
-          // Add line 'context.<varname> = <varname>;'
-          // after each variable declaration in methods but not in jsx-attributes
-          // This fills the handlebars render-context with all local vars and react.props
-          if (isInMethodDefinition(this) && !wasInsideJSXExpressionContainer(this)) {
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-              for (var _iterator = this.get('declarations')[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                var decl = _step.value;
-
-                var varRef = vars.get(createKeyFromPath(decl.get('id')));
-                if (varRef) {
-                  this.replaceWith(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef), decl.get('init').node)));
-                }
-              }
-            } catch (err) {
-              _didIteratorError = true;
-              _iteratorError = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion && _iterator['return']) {
-                  _iterator['return']();
-                }
-              } finally {
-                if (_didIteratorError) {
-                  throw _iteratorError;
-                }
-              }
-            }
-          }
-        }
-      },
       MemberExpression: {
         enter: function enter() {
           if (this.get('object').isThisExpression() && this.get('property').get('name').node == 'props') {
@@ -127,6 +91,7 @@ module.exports = function (opts) {
                   varRef = scope.generateUidIdentifier('var');
                   vars.set(key, varRef);
                 }
+                findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
                 expression.replaceWith(t.identifier(varRef.name));
               }
               break;
@@ -227,13 +192,13 @@ module.exports = function (opts) {
 
   function processAttributesWithSpread(attributes, tagName, renderAsPartial) {
     var objects = [];
-    var _iteratorNormalCompletion2 = true;
-    var _didIteratorError2 = false;
-    var _iteratorError2 = undefined;
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
 
     try {
-      for (var _iterator2 = attributes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-        var attribute = _step2.value;
+      for (var _iterator = attributes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        var attribute = _step.value;
 
         if (attribute.isJSXSpreadAttribute()) {
           objects.push(attribute.get('argument').node);
@@ -250,16 +215,16 @@ module.exports = function (opts) {
         }
       }
     } catch (err) {
-      _didIteratorError2 = true;
-      _iteratorError2 = err;
+      _didIteratorError = true;
+      _iteratorError = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-          _iterator2['return']();
+        if (!_iteratorNormalCompletion && _iterator['return']) {
+          _iterator['return']();
         }
       } finally {
-        if (_didIteratorError2) {
-          throw _iteratorError2;
+        if (_didIteratorError) {
+          throw _iteratorError;
         }
       }
     }
@@ -276,23 +241,23 @@ module.exports = function (opts) {
 
   function processAttributes(attributes, renderAsPartial) {
     var markup = '';
-    var _iteratorNormalCompletion3 = true;
-    var _didIteratorError3 = false;
-    var _iteratorError3 = undefined;
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
 
     try {
-      for (var _iterator3 = attributes[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-        var attribute = _step3.value;
+      for (var _iterator2 = attributes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+        var attribute = _step2.value;
 
         markup += ' ' + getAttributeName(attribute) + '=';
         var value = attribute.get('value');
         if (value.isJSXExpressionContainer()) {
           if (!renderAsPartial) {
-            markup += '{{';
+            markup += '"{{';
           }
           markup += stringifyExpression(filterThisExpressions(value.get('expression')));
           if (!renderAsPartial) {
-            markup += '}}';
+            markup += '}}"';
           }
         } else if (value.isLiteral()) {
           markup += '"' + value.get('value').node + '"';
@@ -301,16 +266,16 @@ module.exports = function (opts) {
         }
       }
     } catch (err) {
-      _didIteratorError3 = true;
-      _iteratorError3 = err;
+      _didIteratorError2 = true;
+      _iteratorError2 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion3 && _iterator3['return']) {
-          _iterator3['return']();
+        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
+          _iterator2['return']();
         }
       } finally {
-        if (_didIteratorError3) {
-          throw _iteratorError3;
+        if (_didIteratorError2) {
+          throw _iteratorError2;
         }
       }
     }
