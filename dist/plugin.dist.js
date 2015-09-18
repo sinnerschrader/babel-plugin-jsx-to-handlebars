@@ -460,12 +460,6 @@ module.exports = function (opts) {
     });
   }
 
-  function isInMethodDefinition(path) {
-    return path.findParent(function (path) {
-      return path.isMethodDefinition();
-    });
-  }
-
   function isInsideJSXAttribute(path) {
     return !!path.findParent(function (path) {
       return path.isJSXAttribute();
