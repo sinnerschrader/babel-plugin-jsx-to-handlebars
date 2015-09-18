@@ -7,11 +7,16 @@ export default class Arrow extends React.Component {
       'b'
     ];
     return (
-      <ul>
-        {list.map((item, index) => {
-          return <li key={index}>{index}. {item}</li>
-        })}
-      </ul>
+      <div>
+        <ul>
+          {list.map((item, index) => <li key={index}>{index}. {item}</li>)}
+        </ul>
+        <ul>
+          {list.map((item, index) => {
+            return <li key={index}>{index}. {item}</li>
+          })}
+        </ul>
+      </div>
     );
   }
 }

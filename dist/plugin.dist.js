@@ -91,7 +91,9 @@ module.exports = function (opts) {
                   varRef = scope.generateUidIdentifier('var');
                   vars.set(key, varRef);
                 }
-                findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
+                if (!isFunctionInsideJSXExpressionContainer(expression)) {
+                  findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
+                }
                 expression.replaceWith(t.identifier(varRef.name));
               }
               break;
@@ -293,18 +295,40 @@ module.exports = function (opts) {
             this.replaceWith(t.functionExpression(null, this.node.params, t.blockStatement([t.returnStatement(body.node)]), false, false));
           }
           if (this.isFunctionExpression() || this.isArrowFunctionExpression()) {
-            this.setData('was-jsx', true);
-            var body = this.get('body').get('body');
-            var firstStatement = body[0];
-            firstStatement.insertBefore(t.variableDeclaration('var', [t.variableDeclarator(localContextRef, t.callExpression(createMemberExpression('Object', 'assign'), [t.objectExpression([]), localContextRef]))]));
             var params = this.get('params');
-            for (var i = params.length - 1; i >= 0; i--) {
-              var _name3 = params[i].get('name').node;
-              var varRef = vars.get(createKeyFromPath(params[i]));
-              if (varRef) {
-                firstStatement.insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), t.identifier(_name3))));
+            var objects = [];
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+              for (var _iterator3 = params[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                var param = _step3.value;
+
+                var _name3 = param.get('name').node;
+                var varRef = vars.get(createKeyFromPath(param));
+                if (varRef) {
+                  objects.push(t.property(null, t.literal(varRef.name), t.identifier(_name3)));
+                }
+              }
+            } catch (err) {
+              _didIteratorError3 = true;
+              _iteratorError3 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion3 && _iterator3['return']) {
+                  _iterator3['return']();
+                }
+              } finally {
+                if (_didIteratorError3) {
+                  throw _iteratorError3;
+                }
               }
             }
+
+            var body = this.get('body').get('body');
+            var firstStatement = body[0];
+            firstStatement.insertBefore(t.variableDeclaration('var', [t.variableDeclarator(localContextRef, t.callExpression(createMemberExpression('Object', 'assign'), [t.objectExpression([]), localContextRef, t.objectExpression(objects)]))]));
           }
         }
       });
@@ -440,16 +464,26 @@ module.exports = function (opts) {
     });
   }
 
-  function wasInsideJSXExpressionContainer(path) {
-    return !!path.findParent(function (path) {
-      return path.getData('was-jsx');
-    });
-  }
-
   function isInsideJSXAttribute(path) {
     return !!path.findParent(function (path) {
       return path.isJSXAttribute();
     });
+  }
+
+  function isFunctionInsideJSXExpressionContainer(path) {
+    var result = false;
+    path = path.findParent(function (path) {
+      return path.isFunctionExpression() || path.isArrowFunctionExpression();
+    });
+    if (path && (path.isFunctionExpression() || path.isArrowFunctionExpression())) {
+      path = path.findParent(function (path) {
+        return path.isJSXExpressionContainer();
+      });
+      if (path && path.isJSXExpressionContainer()) {
+        result = true;
+      }
+    }
+    return result;
   }
 
   function isThisPropsExpression(_x) {
