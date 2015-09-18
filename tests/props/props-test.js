@@ -33,3 +33,9 @@ test('spread props should be overwritten by order of occurence', (t) => {
   let path = './tests/props/spread.jsx';
   t.equal(handlebars(path), react(path));
 });
+
+test('react special-props should be respected', (t) => {
+  t.plan(1);
+  let path = './tests/props/special-props.jsx';
+  t.equal(handlebars(path), react(path));
+});
