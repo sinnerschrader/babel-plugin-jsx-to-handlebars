@@ -106,6 +106,8 @@ module.exports = function (opts) {
 
   function createKeyFromPath(path) {
     switch (path.type) {
+      case 'Literal':
+        return path.get('value').node;
       case 'Identifier':
         return path.get('name').node;
       case 'MemberExpression':

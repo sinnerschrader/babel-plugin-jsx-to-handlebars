@@ -6,7 +6,7 @@ export default class Props extends React.Component {
       key: 'value'
     };
     return (
-      <div data-key={obj.key}>
+      <div data-key={obj.key} data-key2={obj['key']}>
         {this.props.property}
       </div>
     );
