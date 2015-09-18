@@ -5,7 +5,7 @@ module.exports = function (opts) {
   var t = opts.types;
 
   var localContextRef = t.identifier('localContext');
-  var vars = undefined;
+  var vars = new Map();
   return new Plugin('handlebars', {
     visitor: {
       ImportDeclaration: {
@@ -28,7 +28,7 @@ module.exports = function (opts) {
       },
       MethodDefinition: {
         enter: function enter() {
-          vars = findVariablesInJSX(this);
+          findVariablesInJSX(this);
         },
         exit: function exit(node) {
           var methodBody = node.value.body;
@@ -76,7 +76,6 @@ module.exports = function (opts) {
   });
 
   function findVariablesInJSX(path) {
-    var vars = new Map();
     path.traverse({
       JSXExpressionContainer: {
         enter: function enter(node, parentPath, scope) {
@@ -85,12 +84,7 @@ module.exports = function (opts) {
             case 'Identifier':
             case 'MemberExpression':
               if (!isThisPropsExpression(expression)) {
-                var key = createKeyFromPath(expression);
-                var varRef = vars.get(key);
-                if (!varRef) {
-                  varRef = scope.generateUidIdentifier('var');
-                  vars.set(key, varRef);
-                }
+                var varRef = newVariableReplacement(expression);
                 if (!isFunctionInsideJSXExpressionContainer(expression)) {
                   findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
                 }
@@ -101,7 +95,6 @@ module.exports = function (opts) {
         }
       }
     });
-    return vars;
   }
 
   function createKeyFromPath(path) {
@@ -109,8 +102,10 @@ module.exports = function (opts) {
       case 'Literal':
         return path.get('value').node;
       case 'Identifier':
+      case 'JSXIdentifier':
         return path.get('name').node;
       case 'MemberExpression':
+      case 'JSXMemberExpression':
         return createKeyFromPath(path.get('object')) + '.' + createKeyFromPath(path.get('property'));
       case 'LogicalExpression':
         return createKeyFromPath(path.get('left')) + path.get('operator').node + createKeyFromPath(path.get('right'));
@@ -128,7 +123,9 @@ module.exports = function (opts) {
     var tagName = undefined;
     if (namePath.isJSXMemberExpression()) {
       // TODO: Dynamic Component with Dynamic Partial
-      tagName = '{{' + stringifyExpression(filterThisExpressions(namePath)) + '}}';
+      var varRef = newVariableReplacement(namePath);
+      findClosestStatement(namePath).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), createMemberExpression(namePath.get('object').node, namePath.get('property').node))));
+      tagName = '{{' + varRef.name + '}}';
     } else {
       tagName = namePath.get('name').node;
     }
@@ -531,6 +528,16 @@ module.exports = function (opts) {
     t.identifier('result')], t.blockStatement([t.returnStatement(t.conditionalExpression(t.callExpression(createMemberExpression('Array', 'isArray'), [t.identifier('result')]), t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression(t.identifier('result'), 'join'), [t.literal('')])]), t.identifier('result')))]), false, // generator
     false // async
     );
+  }
+
+  function newVariableReplacement(path) {
+    var key = createKeyFromPath(path);
+    var varRef = vars.get(key);
+    if (!varRef) {
+      varRef = path.scope.generateUidIdentifier('var');
+      vars.set(key, varRef);
+    }
+    return varRef;
   }
 
   function filterAttriubtes(attributes) {

@@ -2,9 +2,13 @@ import React from 'react';
 
 export default class Guard extends React.Component {
   render() {
-    let variable = 'div';
+    let obj = {
+      tag: 'div'
+    };
     return (
-      <variable></variable>
+      <div>
+        <obj.tag></obj.tag>
+      </div>
     );
   }
 }
