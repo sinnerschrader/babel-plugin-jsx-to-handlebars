@@ -108,10 +108,6 @@ module.exports = function (opts) {
       case 'MemberExpression':
       case 'JSXMemberExpression':
         return createKeyFromPath(path.get('object')) + '.' + createKeyFromPath(path.get('property'));
-      case 'LogicalExpression':
-        return createKeyFromPath(path.get('left')) + path.get('operator').node + createKeyFromPath(path.get('right'));
-      case 'ThisExpression':
-        return 'this';
       default:
         throw new Error('Unable to create key for path type: ' + path.type);
     }
@@ -125,7 +121,7 @@ module.exports = function (opts) {
     if (namePath.isJSXMemberExpression()) {
       // TODO: Dynamic Component with Dynamic Partial
       var varRef = newVariableReplacement(namePath);
-      findClosestStatement(namePath).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), createMemberExpression(namePath.get('object').node, namePath.get('property').node))));
+      findClosestStatement(namePath).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), rewriteJsxThisProps(namePath).node)));
       tagName = '{{' + varRef.name + '}}';
     } else {
       tagName = namePath.get('name').node;
@@ -371,33 +367,13 @@ module.exports = function (opts) {
     // Remove all this-expression from the ast-path, because handlebars does not have a this
     // context. This is emulated with the context and context.props variables.
     switch (path.get('type').node) {
-      case 'Literal':
-        return path;
       case 'Identifier':
-        return path;
-      case 'BinaryExpression':
-        path.replaceWith(t.binaryExpression(path.get('operator').node, filterThisExpressions(path.get('left')).node, filterThisExpressions(path.get('right')).node));
         return path;
       case 'MemberExpression':
         if (path.get('object').isThisExpression()) {
           path.replaceWith(path.get('property'));
         } else if (path.get('object').isMemberExpression()) {
           path.replaceWith(createMemberExpression(filterThisExpressions(path.get('object')).node, path.get('property').node));
-        }
-        return path;
-      case 'CallExpression':
-        if (path.get('callee').isMemberExpression()) {
-          path.replaceWith(t.callExpression(filterThisExpressions(path.get('callee')).node, path.get('arguments').node));
-        }
-        return path;
-      case 'JSXMemberExpression':
-        var object = path.get('object');
-        if (object.isJSXMemberExpression()) {
-          path.replaceWith(t.jSXMemberExpression(filterThisExpressions(object).node, path.get('property').node));
-        } else {
-          if (object.get('name').node == 'this') {
-            path.replaceWith(path.get('property').node);
-          }
         }
         return path;
     }
@@ -407,22 +383,24 @@ module.exports = function (opts) {
   function stringifyExpression(path) {
     // Creates a string-representation of the given ast-path.
     switch (path.get('type').node) {
-      case 'Literal':
-        return path.get('value').node;
       case 'Identifier':
         return path.get('name').node;
-      case 'BinaryExpression':
-        return stringifyExpression(path.get('left')) + path.get('operator').node + stringifyExpression(path.get('right'));
       case 'MemberExpression':
         return stringifyExpression(path.get('object')) + '.' + stringifyExpression(path.get('property'));
-      case 'ThisExpression':
-        return 'this';
-      case 'JSXMemberExpression':
-        return stringifyExpression(path.get('object')) + '.' + stringifyExpression(path.get('property'));
-      case 'JSXIdentifier':
-        return path.get('name').node;
     }
     throw new Error('Unknown expression node type: ' + path.type);
+  }
+
+  function rewriteJsxThisProps(path) {
+    if (path.isJSXMemberExpression()) {
+      var object = path.get('object');
+      if (object.isJSXIdentifier() && object.get('name').node == 'this') {
+        path.replaceWith(createMemberExpression(localContextRef, path.get('property').node));
+      } else {
+        rewriteJsxThisProps(path.get('object'));
+      }
+    }
+    return path;
   }
 
   // -- helper -------------------
