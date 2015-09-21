@@ -368,6 +368,9 @@ module.exports = function (opts) {
     return markup;
   }
 
+  /**
+   * Returns a valid template snippet, either markup or a valid variable reference.
+   */
   function processMaybeJsxElement(path) {
     if (path.isJSXElement()) {
       return processJSXElement(path);
@@ -375,7 +378,7 @@ module.exports = function (opts) {
       var stmt = findClosestStatement(path);
       var expressionRef = stmt.scope.generateUidIdentifier('expression');
       stmt.insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, expressionRef.name), path.node)));
-      return expressionRef.name;
+      return '{{' + expressionRef.name + '}}';
     }
   }
 

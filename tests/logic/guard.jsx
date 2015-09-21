@@ -4,10 +4,13 @@ export default class Guard extends React.Component {
   render() {
     let show = true;
     return (
-      <ul>
-        {show && <li></li>}
-        {show ? <li></li> : null}
-      </ul>
+      <div>
+        <ul>
+          {show && <li></li>}
+          {show ? <li></li> : null}
+        </ul>
+        {show && ['a', 'b', 'c'].join(' ')}
+      </div>
     );
   }
 }
