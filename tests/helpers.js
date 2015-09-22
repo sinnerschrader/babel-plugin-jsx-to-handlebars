@@ -20,6 +20,7 @@ export function babelTransform(source, enablePlugin = true, opts = {}) {
     stage: 0,
     plugins: enablePlugin ? ['../dist/plugin.dist.js'] : []
   });
+console.log('\n\n\ncode:\n', babel.transform(source, localOpts).code);
   return babel.transform(source, localOpts).code;
 }
 

@@ -21,6 +21,21 @@ module.exports = function (opts) {
           }
         }
       },
+      FunctionExpression: {
+        enter: function enter() {
+          if (this.get('id').node !== null && this.get('id').get('name').node == 'render') {
+            findVariablesInJSX(this);
+          }
+        },
+        exit: function exit() {
+          if (this.get('id').node !== null && this.get('id').get('name').node == 'render') {
+            processRenderFunction(this, this.get('body').node);
+            this.findParent(function (path) {
+              return path.isVariableDeclaration();
+            }).dangerouslyRemove();
+          }
+        }
+      },
       ClassDeclaration: {
         exit: function exit() {
           this.dangerouslyRemove();
@@ -28,29 +43,14 @@ module.exports = function (opts) {
       },
       MethodDefinition: {
         enter: function enter() {
-          findVariablesInJSX(this);
+          if (this.get('key').get('name').node == 'render') {
+            findVariablesInJSX(this);
+          }
         },
-        exit: function exit(node) {
-          var methodBody = node.value.body;
-
-          // Prepend context and context.props wrapper to function body
-          var contextIdentifier = t.identifier('context');
-          methodBody.body = Array.prototype.concat([t.variableDeclaration('var', [t.variableDeclarator(localContextRef, t.objectExpression([]))]), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, 'props'), t.callExpression(createMemberExpression('Object', 'assign'), [findDefaultPropsIfAny(this), createMemberExpression('execOptions', 'hash'), createMemberExpression(t.logicalExpression('||', createMemberExpression('execOptions', 'hash'), t.objectExpression([])), '__$spread$__')]))),
-          // localContext.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
-          t.ifStatement(t.unaryExpression('!', createMemberExpression('execOptions', 'data', 'partial-block')), t.blockStatement([t.throwStatement(t.newExpression(t.identifier('Error'), [t.literal('Calling partials is only valid as block-partial')]))])), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, 'props', 'children'), t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression('execOptions', 'data', 'partial-block'), [contextIdentifier])])))], methodBody.body);
-
-          var programPath = findProgramPath(this);
-          var classID = findClassDeclaration(this).get('id').get('name').node;
-          // export default function...
-          programPath.node.body.push(t.functionDeclaration(t.identifier(classID), // id
-          [], // params
-          t.blockStatement([t.expressionStatement(t.callExpression(createMemberExpression('Handlebars', 'registerPartial'), [t.literal(classID), t.functionExpression(undefined, // id
-          [// params
-          contextIdentifier, t.identifier('execOptions')], methodBody, false, // generator
-          false // async
-          )]))]), false, // generator
-          false // async
-          ), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(t.identifier(classID), 'handlebars-partial'), t.literal(true))), t.exportDefaultDeclaration(t.identifier(classID)));
+        exit: function exit() {
+          if (this.get('key').get('name').node == 'render') {
+            processRenderFunction(this, this.get('value').get('body').node);
+          }
         }
       },
       MemberExpression: {
@@ -74,6 +74,34 @@ module.exports = function (opts) {
       }
     }
   });
+
+  function processRenderFunction(path, node) {
+    // Prepend context and context.props wrapper to function body
+    var contextIdentifier = t.identifier('context');
+    node.body = Array.prototype.concat([t.variableDeclaration('var', [t.variableDeclarator(localContextRef, t.objectExpression([]))]), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, 'props'), t.callExpression(createMemberExpression('Object', 'assign'), [findDefaultPropsIfAny(path), createMemberExpression('execOptions', 'hash'), createMemberExpression(t.logicalExpression('||', createMemberExpression('execOptions', 'hash'), t.objectExpression([])), '__$spread$__')]))),
+    // localContext.props.children = new Handlebars.SafeString(execOptions.data['partial-block'](context));
+    t.ifStatement(t.unaryExpression('!', createMemberExpression('execOptions', 'data', 'partial-block')), t.blockStatement([t.throwStatement(t.newExpression(t.identifier('Error'), [t.literal('Calling partials is only valid as block-partial')]))])), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, 'props', 'children'), t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression('execOptions', 'data', 'partial-block'), [contextIdentifier])])))], node.body);
+
+    var programPath = findProgramPath(path);
+    var decl = findClassDeclaration(path);
+    var classID = undefined;
+    if (decl) {
+      classID = decl.get('id').get('name').node;
+    } else {
+      decl = findBabelClassDeclaration(path);
+      classID = decl.get('arguments')[0].get('name').node;
+    }
+    // export default function...
+    programPath.node.body.push(t.functionDeclaration(t.identifier(classID), // id
+    [], // params
+    t.blockStatement([t.expressionStatement(t.callExpression(createMemberExpression('Handlebars', 'registerPartial'), [t.literal(classID), t.functionExpression(undefined, // id
+    [// params
+    contextIdentifier, t.identifier('execOptions')], node, false, // generator
+    false // async
+    )]))]), false, // generator
+    false // async
+    ), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(t.identifier(classID), 'handlebars-partial'), t.literal(true))), t.exportDefaultDeclaration(t.identifier(classID)));
+  }
 
   function findVariablesInJSX(path) {
     path.traverse({
@@ -442,14 +470,37 @@ module.exports = function (opts) {
     });
   }
 
-  function findDefaultPropsIfAny(path) {
-    path = findClassDeclaration(path);
-    var defaultPropsPath = path.get('body').get('body').filter(function (element) {
-      return element.isClassProperty();
-    }).filter(function (element) {
-      return element.get('key').get('name').node == 'defaultProps';
+  function findBabelClassDeclaration(path) {
+    return path.findParent(function (path) {
+      return path.isCallExpression() && path.get('callee').get('name').node == '_createClass';
     });
-    if (defaultPropsPath.length > 0) {
+  }
+
+  function findDefaultPropsIfAny(path) {
+    var decl = findClassDeclaration(path);
+    var defaultPropsPath = undefined;
+    if (decl) {
+      defaultPropsPath = decl.get('body').get('body').filter(function (element) {
+        return element.isClassProperty();
+      }).filter(function (element) {
+        return element.get('key').get('name').node == 'defaultProps';
+      });
+    } else {
+      decl = findBabelClassDeclaration(path);
+      if (decl) {
+        var props = decl.get('arguments')[2].get('elements');
+        defaultPropsPath = props.filter(function (prop) {
+          return prop.get('properties').find(function (prop) {
+            return prop.get('value').get('value').node == 'defaultProps';
+          });
+        }).map(function (prop) {
+          return prop.get('properties').find(function (prop) {
+            return prop.get('key').get('name').node == 'value';
+          });
+        });
+      }
+    }
+    if (defaultPropsPath && defaultPropsPath.length > 0) {
       return defaultPropsPath[0].get('value').node;
     }
     return t.objectExpression([]);
