@@ -185,6 +185,10 @@ module.exports = function (opts) {
   }
 
   function processAttributesWithSpread(attributes, tagName, renderAsPartial) {
+    if (attributes.length == 0) {
+      return '';
+    }
+
     var objects = [];
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
@@ -223,13 +227,13 @@ module.exports = function (opts) {
       }
     }
 
-    var ref = attributes[0].scope.generateUidIdentifier('_' + tagName + '_attributes_');
+    var ref = findProgramPath(attributes[0]).scope.generateUidIdentifier('_' + tagName + '_attributes_');
     findClosestStatement(attributes[0]).insertBefore([t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, ref.name), t.arrayExpression(objects))), t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, ref.name), t.callExpression(createMemberExpression('Object', 'assign'), [t.objectExpression([]), t.spreadElement(createMemberExpression(localContextRef, ref.name))])))]);
 
     if (renderAsPartial) {
       return ' __$spread$__=' + ref.name;
     }
-    findClosestStatement(attributes[0]).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, ref.name), t.callExpression(createMemberExpression(t.callExpression(createMemberExpression(t.callExpression(createMemberExpression('Object', 'keys'), [createMemberExpression(localContextRef, ref.name)]), 'filter'), [t.functionExpression(null, [t.identifier('key')], t.blockStatement([t.returnStatement(t.logicalExpression('&&', t.logicalExpression('!=', t.identifier('key'), t.literal('children')), t.logicalExpression('!=', t.identifier('key'), t.literal('__$spread$__'))))]))]), 'reduce'), [t.functionExpression(null, [t.identifier('props'), t.identifier('key')], t.blockStatement([t.expressionStatement(t.assignmentExpression('=', t.memberExpression(t.identifier('props'), t.identifier('key'), true), t.memberExpression(createMemberExpression(localContextRef, ref.name), t.identifier('key'), true))), t.returnStatement(t.identifier('props'))])), t.objectExpression([])]))));
+    createFilterSpreadAndChildrenAttributes(attributes[0], ref);
     return '{{#each ' + ref.name + '}} {{@key}}="{{this}}"{{/each}}';
   }
 
@@ -528,6 +532,10 @@ module.exports = function (opts) {
     t.identifier('result')], t.blockStatement([t.returnStatement(t.conditionalExpression(t.callExpression(createMemberExpression('Array', 'isArray'), [t.identifier('result')]), t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression(t.identifier('result'), 'join'), [t.literal('')])]), t.identifier('result')))]), false, // generator
     false // async
     );
+  }
+
+  function createFilterSpreadAndChildrenAttributes(attribute, ref) {
+    findClosestStatement(attribute).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, ref.name), t.callExpression(createMemberExpression(t.callExpression(createMemberExpression(t.callExpression(createMemberExpression('Object', 'keys'), [createMemberExpression(localContextRef, ref.name)]), 'filter'), [t.functionExpression(null, [t.identifier('key')], t.blockStatement([t.returnStatement(t.logicalExpression('&&', t.logicalExpression('!=', t.identifier('key'), t.literal('children')), t.logicalExpression('!=', t.identifier('key'), t.literal('__$spread$__'))))]))]), 'reduce'), [t.functionExpression(null, [t.identifier('props'), t.identifier('key')], t.blockStatement([t.expressionStatement(t.assignmentExpression('=', t.memberExpression(t.identifier('props'), t.identifier('key'), true), t.memberExpression(createMemberExpression(localContextRef, ref.name), t.identifier('key'), true))), t.returnStatement(t.identifier('props'))])), t.objectExpression([])]))));
   }
 
   function newVariableReplacement(path) {

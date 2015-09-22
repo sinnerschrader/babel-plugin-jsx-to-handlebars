@@ -6,7 +6,8 @@ import React from 'react';
 
 export function handlebars(file, data = {}) {
   var dir = path.dirname(file);
-  return compileTemplate(customRequire(dir, babelTransform(file)), undefined, data)();
+  let source = fs.readFileSync(file);
+  return compileTemplate(customRequire(dir, babelTransform(source)), undefined, data)();
 }
 
 export function react(file, data = {}) {
@@ -14,12 +15,12 @@ export function react(file, data = {}) {
   return React.renderToStaticMarkup(React.createElement(Component, data));
 }
 
-export function babelTransform(file, enablePlugin = true) {
-  let source = fs.readFileSync(file);
-  return babel.transform(source, {
+export function babelTransform(source, enablePlugin = true, opts = {}) {
+  let localOpts = Object.assign(opts, {
     stage: 0,
     plugins: enablePlugin ? ['../dist/plugin.dist.js'] : []
-  }).code;
+  });
+  return babel.transform(source, localOpts).code;
 }
 
 export function customRequire(dir, code) {
@@ -30,7 +31,8 @@ export function customRequire(dir, code) {
     let req = function(id) {
       if (id[0] == '.') {
         id = './' + path.join(dir, id);
-        return commonjs(babelTransform(id));
+        let source = fs.readFileSync(id);
+        return commonjs(babelTransform(source));
       } else {
         return require(id);
       }
