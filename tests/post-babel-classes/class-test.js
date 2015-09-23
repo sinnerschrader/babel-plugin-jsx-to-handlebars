@@ -15,6 +15,21 @@ test('classes should be able to use if babel already transformed syntax', (t) =>
       'es6.modules'
     ]
   });
+  t.equal(compileTemplate(customRequire(dir, babelTransform(code)))(), react(path));
+});
+
+test('classes without default-props should be able to use if babel already transformed syntax', (t) => {
+  t.plan(1);
+  let path = './tests/post-babel-classes/class-without-default-props.jsx';
+
+  var dir = dirname(path);
+  let source = readFileSync(path);
+  let code = babelTransform(source, false, {
+    blacklist: [
+      'react',
+      'es6.modules'
+    ]
+  });
 
   t.equal(compileTemplate(customRequire(dir, babelTransform(code)))(), react(path));
 });

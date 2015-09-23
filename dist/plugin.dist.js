@@ -482,26 +482,99 @@ module.exports = function (opts) {
     if (decl) {
       defaultPropsPath = decl.get('body').get('body').filter(function (element) {
         return element.isClassProperty();
-      }).filter(function (element) {
+      }).find(function (element) {
         return element.get('key').get('name').node == 'defaultProps';
       });
     } else {
       decl = findBabelClassDeclaration(path);
       if (decl) {
-        var props = decl.get('arguments')[2].get('elements');
-        defaultPropsPath = props.filter(function (prop) {
-          return prop.get('properties').find(function (prop) {
-            return prop.get('value').get('value').node == 'defaultProps';
-          });
-        }).map(function (prop) {
-          return prop.get('properties').find(function (prop) {
-            return prop.get('key').get('name').node == 'value';
-          });
-        });
+        var args = decl.get('arguments');
+        if (args.length > 2) {
+          // Find property with key defaultProps...
+          var element = undefined;
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
+
+          try {
+            for (var _iterator4 = args[2].get('elements')[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              var el = _step4.value;
+              var _iteratorNormalCompletion6 = true;
+              var _didIteratorError6 = false;
+              var _iteratorError6 = undefined;
+
+              try {
+                for (var _iterator6 = el.get('properties')[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                  var prop = _step6.value;
+
+                  if (prop.get('key').get('name').node == 'key' && prop.get('value').get('value').node == 'defaultProps') {
+                    element = el;
+                  }
+                }
+              } catch (err) {
+                _didIteratorError6 = true;
+                _iteratorError6 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion6 && _iterator6['return']) {
+                    _iterator6['return']();
+                  }
+                } finally {
+                  if (_didIteratorError6) {
+                    throw _iteratorError6;
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion4 && _iterator4['return']) {
+                _iterator4['return']();
+              }
+            } finally {
+              if (_didIteratorError4) {
+                throw _iteratorError4;
+              }
+            }
+          }
+
+          if (element) {
+            // ... and select value node out of it
+            var _iteratorNormalCompletion5 = true;
+            var _didIteratorError5 = false;
+            var _iteratorError5 = undefined;
+
+            try {
+              for (var _iterator5 = element.get('properties')[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                var prop = _step5.value;
+
+                if (prop.get('key').get('name').node == 'value') {
+                  defaultPropsPath = prop;
+                }
+              }
+            } catch (err) {
+              _didIteratorError5 = true;
+              _iteratorError5 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion5 && _iterator5['return']) {
+                  _iterator5['return']();
+                }
+              } finally {
+                if (_didIteratorError5) {
+                  throw _iteratorError5;
+                }
+              }
+            }
+          }
+        }
       }
     }
-    if (defaultPropsPath && defaultPropsPath.length > 0) {
-      return defaultPropsPath[0].get('value').node;
+    if (defaultPropsPath) {
+      return defaultPropsPath.get('value').node;
     }
     return t.objectExpression([]);
   }
