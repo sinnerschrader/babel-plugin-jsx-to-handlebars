@@ -1,12 +1,15 @@
 'use strict';
 
-module.exports = function (opts) {
-  var Plugin = opts.Plugin;
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = function (opts) {
   var t = opts.types;
 
   var localContextRef = t.identifier('localContext');
   var vars = new Map();
-  return new Plugin('handlebars', {
+  return {
     visitor: {
       ImportDeclaration: {
         exit: function exit() {
@@ -15,8 +18,8 @@ module.exports = function (opts) {
           } else {
             var specifier = this.get('specifiers')[0];
             if (specifier.isImportDefaultSpecifier()) {
-              var _name = specifier.get('local').get('name').node;
-              this.insertAfter(t.ifStatement(createMemberExpression(t.identifier(_name), 'handlebars-partial'), t.blockStatement([t.expressionStatement(t.callExpression(t.identifier(_name), []))])));
+              var name = specifier.get('local').get('name').node;
+              this.insertAfter(t.ifStatement(createMemberExpression(t.identifier(name), 'handlebars-partial'), t.blockStatement([t.expressionStatement(t.callExpression(t.identifier(name), []))])));
             }
           }
         }
@@ -73,7 +76,7 @@ module.exports = function (opts) {
         }
       }
     }
-  });
+  };
 
   function processRenderFunction(path, node) {
     // Prepend context and context.props wrapper to function body
@@ -84,7 +87,7 @@ module.exports = function (opts) {
 
     var programPath = findProgramPath(path);
     var decl = findClassDeclaration(path);
-    var classID = undefined;
+    var classID = void 0;
     if (decl) {
       classID = decl.get('id').get('name').node;
     } else {
@@ -145,7 +148,7 @@ module.exports = function (opts) {
     var markup = '';
     var opening = path.get('openingElement');
     var namePath = opening.get('name');
-    var tagName = undefined;
+    var tagName = void 0;
     if (namePath.isJSXMemberExpression()) {
       // TODO: Dynamic Component with Dynamic Partial
       var varRef = newVariableReplacement(namePath);
@@ -194,10 +197,10 @@ module.exports = function (opts) {
         } else if (this.isJSXOpeningElement() || this.isJSXClosingElement()) {
           // Skip
         } else if (this.isLiteral()) {
-            childMarkup += this.get('value').node;
-          } else {
-            throw new Error('Unknown element during JSX processing:  ' + this.type);
-          }
+          childMarkup += this.get('value').node;
+        } else {
+          throw new Error('Unknown element during JSX processing:  ' + this.type);
+        }
         this.skip();
       }
     });
@@ -229,15 +232,15 @@ module.exports = function (opts) {
         if (attribute.isJSXSpreadAttribute()) {
           objects.push(attribute.get('argument').node);
         } else {
-          var _name2 = getAttributeName(attribute);
-          var value = undefined;
+          var name = getAttributeName(attribute);
+          var value = void 0;
           var valuePath = attribute.get('value');
           if (valuePath.isJSXExpressionContainer()) {
             value = valuePath.getData('original') || valuePath.get('expression').node;
           } else if (valuePath.isLiteral()) {
             value = valuePath.node;
           }
-          objects.push(t.objectExpression([t.property(null, t.literal(_name2), value)]));
+          objects.push(t.objectExpression([t.property(null, t.literal(name), value)]));
         }
       }
     } catch (err) {
@@ -245,8 +248,8 @@ module.exports = function (opts) {
       _iteratorError = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion && _iterator['return']) {
-          _iterator['return']();
+        if (!_iteratorNormalCompletion && _iterator.return) {
+          _iterator.return();
         }
       } finally {
         if (_didIteratorError) {
@@ -300,8 +303,8 @@ module.exports = function (opts) {
       _iteratorError2 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-          _iterator2['return']();
+        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+          _iterator2.return();
         }
       } finally {
         if (_didIteratorError2) {
@@ -349,10 +352,10 @@ module.exports = function (opts) {
               for (var _iterator3 = params[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
                 var param = _step3.value;
 
-                var _name3 = param.get('name').node;
+                var name = param.get('name').node;
                 var varRef = vars.get(createKeyFromPath(param));
                 if (varRef) {
-                  objects.push(t.property(null, t.literal(varRef.name), t.identifier(_name3)));
+                  objects.push(t.property(null, t.literal(varRef.name), t.identifier(name)));
                 }
               }
             } catch (err) {
@@ -360,8 +363,8 @@ module.exports = function (opts) {
               _iteratorError3 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion3 && _iterator3['return']) {
-                  _iterator3['return']();
+                if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                  _iterator3.return();
                 }
               } finally {
                 if (_didIteratorError3) {
@@ -370,8 +373,8 @@ module.exports = function (opts) {
               }
             }
 
-            var body = this.get('body').get('body');
-            var firstStatement = body[0];
+            var _body = this.get('body').get('body');
+            var firstStatement = _body[0];
             firstStatement.insertBefore(t.variableDeclaration('var', [t.variableDeclarator(localContextRef, t.callExpression(createMemberExpression('Object', 'assign'), [t.objectExpression([]), localContextRef, t.objectExpression(objects)]))]));
           }
         }
@@ -389,10 +392,10 @@ module.exports = function (opts) {
       markup += '{{#if ' + varRef.name + '}}' + processMaybeJsxElement(expression.get('right')) + '{{/if}}';
     } else if (expression.isConditionalExpression()) {
       // Conditional-expression are rewritten to handlebars if-else-helper
-      var varRef = expression.scope.generateUidIdentifier('test-helper-var');
-      findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef), expression.get('test').node)));
+      var _varRef = expression.scope.generateUidIdentifier('test-helper-var');
+      findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, _varRef), expression.get('test').node)));
 
-      markup += '{{#if ' + varRef.name + '}}' + processMaybeJsxElement(expression.get('consequent')) + '{{else}}' + processMaybeJsxElement(expression.get('alternate')) + '{{/if}}';
+      markup += '{{#if ' + _varRef.name + '}}' + processMaybeJsxElement(expression.get('consequent')) + '{{else}}' + processMaybeJsxElement(expression.get('alternate')) + '{{/if}}';
     } else {
       // TODO: Check if this is sufficient
       markup += '{{' + stringifyExpression(filterThisExpressions(expression)) + '}}';
@@ -478,7 +481,7 @@ module.exports = function (opts) {
 
   function findDefaultPropsIfAny(path) {
     var decl = findClassDeclaration(path);
-    var defaultPropsPath = undefined;
+    var defaultPropsPath = void 0;
     if (decl) {
       defaultPropsPath = decl.get('body').get('body').filter(function (element) {
         return element.isClassProperty();
@@ -491,7 +494,7 @@ module.exports = function (opts) {
         var args = decl.get('arguments');
         if (args.length > 2) {
           // Find property with key defaultProps...
-          var element = undefined;
+          var element = void 0;
           var _iteratorNormalCompletion4 = true;
           var _didIteratorError4 = false;
           var _iteratorError4 = undefined;
@@ -505,9 +508,9 @@ module.exports = function (opts) {
 
               try {
                 for (var _iterator6 = el.get('properties')[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                  var prop = _step6.value;
+                  var _prop = _step6.value;
 
-                  if (prop.get('key').get('name').node == 'key' && prop.get('value').get('value').node == 'defaultProps') {
+                  if (_prop.get('key').get('name').node == 'key' && _prop.get('value').get('value').node == 'defaultProps') {
                     element = el;
                   }
                 }
@@ -516,8 +519,8 @@ module.exports = function (opts) {
                 _iteratorError6 = err;
               } finally {
                 try {
-                  if (!_iteratorNormalCompletion6 && _iterator6['return']) {
-                    _iterator6['return']();
+                  if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                    _iterator6.return();
                   }
                 } finally {
                   if (_didIteratorError6) {
@@ -531,8 +534,8 @@ module.exports = function (opts) {
             _iteratorError4 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion4 && _iterator4['return']) {
-                _iterator4['return']();
+              if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                _iterator4.return();
               }
             } finally {
               if (_didIteratorError4) {
@@ -560,8 +563,8 @@ module.exports = function (opts) {
               _iteratorError5 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion5 && _iterator5['return']) {
-                  _iterator5['return']();
+                if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                  _iterator5.return();
                 }
               } finally {
                 if (_didIteratorError5) {
@@ -607,25 +610,15 @@ module.exports = function (opts) {
     return result;
   }
 
-  function isThisPropsExpression(_x) {
-    var _again = true;
-
-    _function: while (_again) {
-      var path = _x;
-      object = undefined;
-      _again = false;
-
-      if (path.isMemberExpression()) {
-        var object = path.get('object');
-        if (object.isThisExpression() && path.get('property').get('name').node == 'props') {
-          return true;
-        }
-        _x = object;
-        _again = true;
-        continue _function;
+  function isThisPropsExpression(path) {
+    if (path.isMemberExpression()) {
+      var object = path.get('object');
+      if (object.isThisExpression() && path.get('property').get('name').node == 'props') {
+        return true;
       }
-      return false;
+      return isThisPropsExpression(object);
     }
+    return false;
   }
 
   function hasSpreadAttribute(attributes) {
