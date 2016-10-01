@@ -10,69 +10,70 @@ exports.default = function (opts) {
   var localContextRef = t.identifier('localContext');
   var vars = new Map();
   return {
+    inherits: _babelPluginSyntaxJsx2.default,
     visitor: {
       ImportDeclaration: {
-        exit: function exit() {
-          if (this.get('source').get('value').node == 'react') {
-            this.replaceWith(t.importDeclaration([t.importDefaultSpecifier(t.identifier('Handlebars'))], t.literal('handlebars')));
+        exit: function exit(node) {
+          if (node.get('source').get('value').node == 'react') {
+            node.replaceWith(t.importDeclaration([t.importDefaultSpecifier(t.identifier('Handlebars'))], t.stringLiteral('handlebars')));
           } else {
-            var specifier = this.get('specifiers')[0];
+            var specifier = node.get('specifiers')[0];
             if (specifier.isImportDefaultSpecifier()) {
               var name = specifier.get('local').get('name').node;
-              this.insertAfter(t.ifStatement(createMemberExpression(t.identifier(name), 'handlebars-partial'), t.blockStatement([t.expressionStatement(t.callExpression(t.identifier(name), []))])));
+              node.insertAfter(t.ifStatement(createMemberExpression(t.identifier(name), 'handlebars-partial'), t.blockStatement([t.expressionStatement(t.callExpression(t.identifier(name), []))])));
             }
           }
         }
       },
       FunctionExpression: {
-        enter: function enter() {
-          if (this.get('id').node !== null && this.get('id').get('name').node == 'render') {
-            findVariablesInJSX(this);
+        enter: function enter(node) {
+          if (node.get('id').node !== null && node.get('id').get('name').node == 'render') {
+            findVariablesInJSX(node);
           }
         },
-        exit: function exit() {
-          if (this.get('id').node !== null && this.get('id').get('name').node == 'render') {
-            processRenderFunction(this, this.get('body').node);
-            this.findParent(function (path) {
+        exit: function exit(node) {
+          if (node.get('id').node !== null && node.get('id').get('name').node == 'render') {
+            processRenderFunction(node, node.get('body').node);
+            node.findParent(function (path) {
               return path.isVariableDeclaration();
             }).dangerouslyRemove();
           }
         }
       },
       ClassDeclaration: {
-        exit: function exit() {
-          this.dangerouslyRemove();
+        exit: function exit(node) {
+          node.dangerouslyRemove();
         }
       },
-      MethodDefinition: {
-        enter: function enter() {
-          if (this.get('key').get('name').node == 'render') {
-            findVariablesInJSX(this);
+      ClassMethod: {
+        enter: function enter(node) {
+          if (node.get('key').get('name').node == 'render') {
+            findVariablesInJSX(node);
           }
         },
-        exit: function exit() {
-          if (this.get('key').get('name').node == 'render') {
-            processRenderFunction(this, this.get('value').get('body').node);
+        exit: function exit(node) {
+          if (node.get('key').get('name').node == 'render') {
+            processRenderFunction(node, node.get('value').get('body').node);
           }
         }
       },
       MemberExpression: {
-        enter: function enter() {
-          if (this.get('object').isThisExpression() && this.get('property').get('name').node == 'props') {
-            this.skip();
+        enter: function enter(node) {
+          if (node.get('object').isThisExpression() && node.get('property').get('name').node == 'props') {
+            node.skip();
             return createMemberExpression(localContextRef, 'props');
           }
         }
       },
       JSXElement: {
-        enter: function enter(node, parent, scope) {
-          var programPath = findProgramPath(this);
+        enter: function enter(node) {
+          var programPath = findProgramPath(node);
           // Extract and insert at the top the handelbars template...
           var compileResultRef = programPath.scope.generateUidIdentifier('compiledPartial');
-          var markup = processJSXElement(this);
+          var markup = processJSXElement(node);
           programPath.node.body.push(t.variableDeclaration('var', [t.variableDeclarator(compileResultRef, t.callExpression(createMemberExpression('Handlebars', 'compile'), [t.literal(markup)]))]));
           // ...and replace the expression element with a template render call
-          this.replaceWith(t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression(compileResultRef, 'call'), [t.thisExpression(), localContextRef, t.identifier('execOptions')])]));
+          node.replaceWith(t.newExpression(createMemberExpression('Handlebars', 'SafeString'), [t.callExpression(createMemberExpression(compileResultRef, 'call'), [t.thisExpression(), localContextRef, t.identifier('execOptions')])]));
         }
       }
     }
@@ -109,8 +110,8 @@ exports.default = function (opts) {
   function findVariablesInJSX(path) {
     path.traverse({
       JSXExpressionContainer: {
-        enter: function enter(node, parentPath, scope) {
-          var expression = this.get('expression');
+        enter: function enter(node) {
+          var expression = node.get('expression');
           switch (expression.type) {
             case 'Identifier':
             case 'MemberExpression':
@@ -119,7 +120,7 @@ exports.default = function (opts) {
                 if (!isFunctionInsideJSXExpressionContainer(expression)) {
                   findClosestStatement(expression).insertBefore(t.expressionStatement(t.assignmentExpression('=', createMemberExpression(localContextRef, varRef.name), expression.node)));
                 }
-                this.setData('original', expression.node);
+                node.setData('original', expression.node);
                 expression.replaceWith(t.identifier(varRef.name));
               }
               break;
@@ -189,19 +190,19 @@ exports.default = function (opts) {
     // ... children...
     var childMarkup = '';
     path.traverse({
-      enter: function enter() {
-        if (this.isJSXElement()) {
-          childMarkup += processJSXElement(this);
-        } else if (this.isJSXExpressionContainer() && !isInsideJSXAttribute(this)) {
+      enter: function enter(node) {
+        if (node.isJSXElement()) {
+          childMarkup += processJSXElement(node);
+        } else if (node.isJSXExpressionContainer() && !isInsideJSXAttribute(node)) {
           childMarkup += processJSXExpressionContainer.bind(this)();
-        } else if (this.isJSXOpeningElement() || this.isJSXClosingElement()) {
+        } else if (node.isJSXOpeningElement() || node.isJSXClosingElement()) {
           // Skip
-        } else if (this.isLiteral()) {
-          childMarkup += this.get('value').node;
+        } else if (node.isLiteral()) {
+          childMarkup += node.get('value').node;
         } else {
-          throw new Error('Unknown element during JSX processing:  ' + this.type);
+          throw new Error('Unknown element during JSX processing:  ' + node.type);
         }
-        this.skip();
+        node.skip();
       }
     });
     markup += childMarkup.trim().replace(/(>|}})[\n\t]+\s*(<|{{)/g, '$1$2');
@@ -691,4 +692,10 @@ exports.default = function (opts) {
     return voidElements.indexOf(tagName) > -1;
   }
 };
+
+var _babelPluginSyntaxJsx = require('babel-plugin-syntax-jsx');
+
+var _babelPluginSyntaxJsx2 = _interopRequireDefault(_babelPluginSyntaxJsx);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
