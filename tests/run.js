@@ -1,12 +1,14 @@
 #!/usr/bin/env node
+require('babel-register');
 
-require('babel/register');
+const path = require('path');
+const glob = require('glob');
 
-var path = require('path');
-var glob = require('glob');
-
-glob('./tests/**/*-test.js', function (err, files) {
-  files.forEach(function (file) {
+glob('./tests/**/*-test.js', (err, files) => {
+  if (err) {
+    throw err;
+  }
+  files.forEach(file => {
     require(path.resolve(process.cwd(), file));
   });
 });

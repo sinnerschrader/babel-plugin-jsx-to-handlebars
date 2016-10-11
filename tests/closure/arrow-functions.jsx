@@ -2,12 +2,9 @@ import React from 'react';
 
 export default class Arrow extends React.Component {
   render() {
-    let list = [
-      'a',
-      'b'
-    ];
+    const list = ['a', 'b'];
     return (
-      <div>
+      <div {...this.props}>
         <ul>
           {list.map((item, index) => <li key={index}>{index}. {item}</li>)}
         </ul>

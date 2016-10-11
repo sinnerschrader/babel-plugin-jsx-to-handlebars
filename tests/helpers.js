@@ -1,52 +1,59 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import * as babel from 'babel';
+import * as babel from 'babel-core';
 import Handlebars from 'handlebars';
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
+import requireFromString from 'require-from-string';
 
 export function handlebars(file, data = {}) {
-  var dir = path.dirname(file);
-  let source = fs.readFileSync(file);
-  return compileTemplate(customRequire(dir, babelTransform(source)), undefined, data)();
+  const dir = path.dirname(file);
+  const source = fs.readFileSync(file, 'utf-8'); // eslint-disable-line no-sync
+  const transformed = babelTransform(source);
+  return compileTemplate(customRequire(dir, transformed).default, undefined, data)();
 }
 
 export function react(file, data = {}) {
-  let Component = require(path.resolve(__dirname, '..', file));
+  const source = fs.readFileSync(file, 'utf-8'); // eslint-disable-line no-sync
+  const transformed = babelTransform(source, false);
+  const Component = requireFromString(transformed).default;
   return React.renderToStaticMarkup(React.createElement(Component, data));
 }
 
 export function babelTransform(source, enablePlugin = true, opts = {}) {
   let localOpts = Object.assign(opts, {
-    stage: 0,
-    plugins: enablePlugin ? ['../dist/plugin.dist.js'] : []
+    presets: ['es2015', 'stage-0', 'react'],
+    plugins: enablePlugin ? ['./dist/plugin.dist.js'] : []
   });
   return babel.transform(source, localOpts).code;
 }
 
 export function customRequire(dir, code) {
-  let commonjs = function(code) {
-    let mod = {
-      exports: {}
-    };
-    let req = function(id) {
+  function commonjs(code) {
+    const mod = {exports: {}};
+    function req(id) {
       if (id[0] == '.') {
         id = './' + path.join(dir, id);
-        let source = fs.readFileSync(id);
+        const source = fs.readFileSync(id); // eslint-disable-line no-sync
         return commonjs(babelTransform(source));
       } else {
         return require(id);
       }
     }
-    let fn = new Function('module', 'exports', 'require', code);
-    fn.call(null, mod, mod.exports, req);
+    const fn = new Function('module', 'exports', 'require', code); // eslint-disable-line no-new-func
+    fn(mod, mod.exports, req);
     return mod.exports;
   }
   return commonjs(code);
 }
 
 export function compileTemplate(templateModule, children = '', data = {}) {
-  templateModule.call(null);
-  let name = templateModule.name;
-  let props = Object.keys(data).map(key => `${key}="${data[key]}"`).join(' ');  
-  return Handlebars.compile(`{{#>${name} ${props}}}${children}{{/${name}}}`);
+  templateModule();
+
+  const name = templateModule.name;
+  const props = Object.keys(data)
+    .map(key => `${key}="${data[key]}"`)
+    .join(' ');
+
+  const template = `{{#> ${name} ${props}}}${children}{{/${name}}}`;
+  return Handlebars.compile(template);
 }

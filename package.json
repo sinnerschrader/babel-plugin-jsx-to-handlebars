@@ -8,7 +8,7 @@
     "demo": "babel --plugins ../dist/plugin.dist.js --out-dir ./demo/ ./source/",
     "watch": "nodemon -e js,jsx --watch lib/plugin.js --watch tests --watch demo/main.js --watch source --exec 'npm run start && npm run test && npm run demo && npm run browserify'",
     "browserify": "browserify demo/main.js > demo/index.js",
-    "test": "babel-istanbul cover tests/run.js | faucet"
+    "test": "babel-istanbul cover tests/run.js"
   },
   "author": {
     "name": "SinnerSchrader - Freie Radikale",
@@ -45,6 +45,8 @@
   },
   "devDependencies": {
     "babel-istanbul": "^0.3.20",
+    "babel-preset-es2015": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
     "babel-preset-stage-0": "^6.16.0",
     "browserify": "^11.1.0",
     "classnames": "^2.1.3",
@@ -54,6 +56,7 @@
     "glob": "^5.0.14",
     "nodemon": "^1.5.0",
     "react": "^0.13.3",
+    "require-from-string": "^1.2.1",
     "tape": "^4.2.0"
   }
 }

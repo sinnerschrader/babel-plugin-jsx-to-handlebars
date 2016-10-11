@@ -2,10 +2,7 @@ import React from 'react';
 
 export default class Closure extends React.Component {
   render() {
-    let list = [
-      'a',
-      'b'
-    ];
+    const list = ['a', 'b'];
     return (
       <ul>
         {list.map(function(item, index) {

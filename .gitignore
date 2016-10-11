@@ -1,7 +1,8 @@
 node_modules
-npm-debug.log
+npm-debug.log*
 typings
 demo/index.js
 demo/test.js
 demo/test2.js
+dist/
 coverage
