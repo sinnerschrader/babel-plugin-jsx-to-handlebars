@@ -9,6 +9,7 @@ export function handlebars(file, data = {}) {
   const dir = path.dirname(file);
   const source = fs.readFileSync(file, 'utf-8'); // eslint-disable-line no-sync
   const transformed = babelTransform(source);
+  console.log('trans', transformed);
   return compileTemplate(customRequire(dir, transformed).default, undefined, data)();
 }
 
