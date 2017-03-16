@@ -1,3 +1,5 @@
+# THIS IS NOT MAINTAINED ANYMORE
+
 # babel-plugin-jsx-to-handlebars
 
 [![GitHub license](https://img.shields.io/github/license/sinnerschrader/babel-plugin-jsx-to-handlebars.svg)](https://github.com/sinnerschrader/babel-plugin-jsx-to-handlebars)
